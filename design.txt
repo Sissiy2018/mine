@@ -1,0 +1,24 @@
+parameter sets used:
+mean1_range = np.arange(10, 1001, 10)
+mean2_range = np.arange(10, 1001, 10)
+std_dev_range = np.arange(10, 101, 10)
+simulation gives us a bimodal distribution which consists of 500 samples from each set of parameters
+-- sensible ranges of parameters?
+
+method 1:
+A neural network is trained on these sets of parameters and one sample for each set
+dummy variables?
+loss function?
+for evaluation, for each set of parameters, predict the distribution with 100 samples, -- enough? 100 or 500?
+and compare them with those from the simulation, assessed with four measures
+
+method 2:
+A neural network is trained on these sets of parameters and summary statistics for distributions from each set
+dummy variables?
+loss function?
+for evaluation, for each set of parameters, predict the distribution with 100 samples, extracting summary statistics 
+and compare them with those from the simulation, assessed with four measures
+
+direct inference method
+
+file name: range1_method1_dummy_loss
