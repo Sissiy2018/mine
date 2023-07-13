@@ -125,7 +125,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 #model.add(Dense(output_shape[0],kernel_initializer='uniform'))
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-09,)
-    model.compile(loss=aleatoric_loss, optimizer=opt, metrics=['accuracy'])
+    model.compile(loss='mean_squared_error', optimizer=opt, metrics=['accuracy'])
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     print(model.summary())
     history = model.fit(X_train, y_train, batch_size=int(len(X_train)/3), epochs = epochs, shuffle=True, 
@@ -161,7 +161,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 
     print(r2_score(y_val, y_pred[:,:4]))
 
-    ext = "range105_method1_dummy_aloss"
+    ext = "range105_method1_dummy_mse"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -317,7 +317,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:4]))
     plt.show()
 
-ext = "range105_method1_dummy_aloss"
+ext = "range105_method1_dummy_mse"
 testing()
 
 

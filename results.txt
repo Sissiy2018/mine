@@ -8,3 +8,6 @@ range105_method2_dummy_aloss: loss: 0.2303 - accuracy: 0.7249 - val_loss: 0.2312
 r_2: 0.38876771486542905
 r_2 for test: 0.3661298774132191
 
+range105_method1_dummy_mse: loss: 0.1353 - accuracy: 0.8014 - val_loss: 0.1414 - val_accuracy: 0.7937
+r_2: 0.7282675164458291
+r_2 for test: 0.7296694943925417
