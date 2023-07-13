@@ -26,9 +26,9 @@ def save_object(obj, filename):
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(10, 1001, 10)
-    mean2_range = np.arange(10, 1001, 10)
-    std_dev_range = np.arange(10, 101, 10)
+    mean1_range = np.arange(0, 10001, 200)
+    mean2_range = np.arange(0, 10001, 200)
+    std_dev_range = np.arange(10, 1001, 50)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
@@ -157,7 +157,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 
     print(r2_score(y_val, y_pred[:,:1]))
 
-    ext = "1sample_dummy"
+    ext = "range105_method2_dummy_aloss"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -314,7 +314,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:1]))
     plt.show()
 
-ext = "1sample_dummy"
+ext = "range105_method2_dummy_aloss"
 testing()
 
 

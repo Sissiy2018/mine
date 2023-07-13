@@ -480,6 +480,42 @@ plt.plot(simulation_dist, label='Simulation Distribution')
 plt.legend()
 plt.show()
 
+#=======================================================================
+#=======================================================================
+#plot code new
+
+ext = "range105_method1_dummy_aloss"
+model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
+
+with open("emu_sc_"+ext+".pkl", 'rb') as run:
+    sc = pickle.load(run)
+
+with open("emu_scy_"+ext+".pkl", 'rb') as run:
+    scy = pickle.load(run)
+
+def parameter_set():
+    # Define the sets of parameters [a, b]
+    # Define the means and standard deviations for the two Gaussian distributions
+    theta_1 = np.arange(0, 10001, 200)
+    theta_2 = np.arange(0, 10001, 200)
+    std_dev = np.arange(10, 1001, 50)
+    run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
+    #sample_size = 500
+    
+    para_sim = np.empty((run, 3))
+    
+    count = 0
+    # Generate samples from each distribution
+    for mean1 in theta_1:
+        for mean2 in theta_2:
+            for std in std_dev:
+                para_sim[count] = np.array([mean1,mean2,std])
+                count += 1
+    
+    return para_sim
+
+para_sim = parameter_set()
+
 def generate_prediction_distribution_full(para_sim,no_run):
     para_sim = np.repeat(para_sim, no_run, axis=0)
         #para_sim = (np.expand_dims(para_sim,0))
@@ -494,7 +530,7 @@ def generate_prediction_distribution_full(para_sim,no_run):
 def generate_simulation_distribution_full(para_sim,no_run):
     
     sim = np.empty((0, 4), dtype=np.float64)
-    
+    count = 0
     
     for params in para_sim:
         theta_1, theta_2, std_dev= params
@@ -512,13 +548,16 @@ def generate_simulation_distribution_full(para_sim,no_run):
             # Append the samples to the main array
             theta_sim[i] = np.array([mean,variance,skewness,kurtosis])
     # Return a probability distribution (e.g., numpy array) for the given parameters
-        sim = np.append(sim, [theta_sim], axis=0)
+        sim = np.vstack((sim, theta_sim))
+        count += 1
+        print(count)
     return sim
 
 # Generate the prediction and simulation distributions
 pred = generate_prediction_distribution_full(para_sim,100)
 sim = generate_simulation_distribution_full(para_sim,100)
 
+mean_diff_std_arr_full = np.empty((0, 52020), dtype=np.float64)
 for col_idx in range(4):
     pred_col = pred[:, col_idx]
     sim_col = sim[:, col_idx]
@@ -529,30 +568,138 @@ for col_idx in range(4):
     std_ratio_arr = np.array([])
 
     for start_idx in range(0, len(pred_col), 100):
-        end_idx = start_idx + step_size
+        end_idx = start_idx + 100
         pred_subset = pred_col[start_idx:end_idx]
         sim_subset= sim_col[start_idx:end_idx]
 
         # Perform operations on the subset of data
         mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
-        wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
-        median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
-        std_ratio = np.std(pred_subset) / np.std(sim_subset)
-    
-    mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
-    wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
-    median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
-    std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+        #td_ratio = np.std(pred_subset) / np.std(sim_subset)
+        mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+    #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+    #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+    mean_diff_std_arr_full = np.vstack((mean_diff_std_arr_full, mean_diff_std_arr))
 
-    # Combine the arrays and label them
-    data_M1 = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
-    labels_M1 = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
+#Combine the arrays and label them
+data_M1 = [mean_diff_std_arr_full[0], mean_diff_std_arr_full[1], mean_diff_std_arr_full[2],mean_diff_std_arr_full[3]]
+labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
+
+# Plot the boxplot
+plt.boxplot(data_M1, labels=labels_M1)
+plt.ylabel('mean_diff_std')
+plt.title('Boxplot')
+plt.show()
+
+median_diff_M_sim_arr_full = np.empty((0, 52020), dtype=np.float64)
+for col_idx in range(4):
+    pred_col = pred[:, col_idx]
+    sim_col = sim[:, col_idx]
     
-    # Plot the boxplot
-    plt.boxplot(data_M1, labels=labels_M1)
-    plt.ylabel('Value')
-    plt.title('Boxplot')
-    plt.show()
+    mean_diff_std_arr = np.array([])
+    wasserstein_distances_arr = np.array([])
+    median_diff_M_sim_arr = np.array([])
+    std_ratio_arr = np.array([])
+
+    for start_idx in range(0, len(pred_col), 100):
+        end_idx = start_idx + 100
+        pred_subset = pred_col[start_idx:end_idx]
+        sim_subset= sim_col[start_idx:end_idx]
+
+        # Perform operations on the subset of data
+        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
+        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+        median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+        #td_ratio = np.std(pred_subset) / np.std(sim_subset)
+        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+        median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+    #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+    median_diff_M_sim_arr_full = np.vstack((median_diff_M_sim_arr_full, median_diff_M_sim_arr))
+
+#Combine the arrays and label them
+data_M1 = [median_diff_M_sim_arr_full[0], median_diff_M_sim_arr_full[1], median_diff_M_sim_arr_full[2],mmedian_diff_M_sim_arr_full[3]]
+labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
+
+# Plot the boxplot
+plt.boxplot(data_M1, labels=labels_M1)
+plt.ylabel('median_diff_M_sim')
+plt.title('Boxplot')
+plt.show()
+
+std_ratio_arr_full = np.empty((0, 52020), dtype=np.float64)
+for col_idx in range(4):
+    pred_col = pred[:, col_idx]
+    sim_col = sim[:, col_idx]
+    
+    mean_diff_std_arr = np.array([])
+    wasserstein_distances_arr = np.array([])
+    median_diff_M_sim_arr = np.array([])
+    std_ratio_arr = np.array([])
+
+    for start_idx in range(0, len(pred_col), 100):
+        end_idx = start_idx + 100
+        pred_subset = pred_col[start_idx:end_idx]
+        sim_subset= sim_col[start_idx:end_idx]
+
+        # Perform operations on the subset of data
+        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
+        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+        std_ratio = np.std(pred_subset) / np.std(sim_subset)
+        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+        #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+        std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+    std_ratio_arr_full = np.vstack((std_ratio_arr_full, std_ratio_arr))
+
+#Combine the arrays and label them
+data_M1 = [std_ratio_arr_full[0], std_ratio_arr_full[1], std_ratio_arr_full[2],std_ratio_arr_full[3]]
+labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
+
+# Plot the boxplot
+plt.boxplot(data_M1, labels=labels_M1)
+plt.ylabel('std_ratio')
+plt.title('Boxplot')
+plt.show()
+
+wasserstein_distances_arr_full = np.empty((0, 52020), dtype=np.float64)
+for col_idx in range(4):
+    pred_col = pred[:, col_idx]
+    sim_col = sim[:, col_idx]
+    
+    mean_diff_std_arr = np.array([])
+    wasserstein_distances_arr = np.array([])
+    median_diff_M_sim_arr = np.array([])
+    std_ratio_arr = np.array([])
+
+    for start_idx in range(0, len(pred_col), 100):
+        end_idx = start_idx + 100
+        pred_subset = pred_col[start_idx:end_idx]
+        sim_subset= sim_col[start_idx:end_idx]
+
+        # Perform operations on the subset of data
+        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
+        wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+        #std_ratio = np.std(pred_subset) / np.std(sim_subset)
+        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+        wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+        #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+        #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+    wasserstein_distances_arr_full = np.vstack((wasserstein_distances_arr_full, wasserstein_distances_arr))
+
+#Combine the arrays and label them
+data_M1 = [wasserstein_distances_arr_full[0], wasserstein_distances_arr_full[1], wasserstein_distances_arr_full[2],wasserstein_distances_arr_full[3]]
+labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
+
+# Plot the boxplot
+plt.boxplot(data_M1, labels=labels_M1)
+plt.ylabel('wasserstein_distances')
+plt.title('Boxplot')
+plt.show()
 
 
 for i in range(4):
