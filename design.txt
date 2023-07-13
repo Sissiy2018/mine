@@ -1,7 +1,7 @@
 parameter sets used:
-mean1_range = np.arange(10, 1001, 10)
-mean2_range = np.arange(10, 1001, 10)
-std_dev_range = np.arange(10, 101, 10)
+mean1_range = np.arange(0, 10001, 200)
+mean2_range = np.arange(0, 10001, 200)
+std_dev_range = np.arange(10, 1001, 50)
 simulation gives us a bimodal distribution which consists of 500 samples from each set of parameters
 -- sensible ranges of parameters?
 

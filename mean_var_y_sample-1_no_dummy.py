@@ -428,6 +428,17 @@ plt.show()
 plt.boxplot(std_ratio_arr)
 plt.show()
 
+# Combine the arrays and label them
+data = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
+labels = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
+
+# Plot the boxplot
+plt.boxplot(data, labels=labels)
+plt.ylabel('Value')
+plt.title('Boxplot')
+plt.show()
+
+
 pred = generate_prediction_distribution(500, 100,50,100)[:,0]
 sim = generate_simulation_distribution(500, 100,50,100)[:,0]
 # Plot the distributions for the first parameter set as an example

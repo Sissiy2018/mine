@@ -6,14 +6,15 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 from scipy.spatial import distance
 from scipy.stats import wasserstein_distance
+import tensorflow as tf
+import tensorflow.keras
+from tensorflow.keras import backend as K
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense,Dropout,BatchNormalization,Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 import numpy as np
 import os
-import tensorflow as tf
-from tensorflow.keras import backend as K
 import matplotlib.pyplot as plt
 import pickle
 
@@ -25,9 +26,9 @@ def save_object(obj, filename):
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(10, 1001, 10)
-    mean2_range = np.arange(10, 1001, 10)
-    std_dev_range = np.arange(10, 101, 10)
+    mean1_range = np.arange(0, 10001, 200)
+    mean2_range = np.arange(0, 10001, 200)
+    std_dev_range = np.arange(10, 1001, 50)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
@@ -72,6 +73,7 @@ def aleatoric_loss(y_true, y_pred):
     return 0.5*(mse + reg)
 
 #=======================================================================
+# Train Neural Network
 def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     
     samples, para = create_samples()
@@ -85,8 +87,8 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     print(X_train.shape, X_val.shape, y_train.shape, y_val.shape)
 
     # determine the number of input and output features
-    n_features = X_train.shape[1]
-    input_shape = (n_features,) 
+    #n_features = X_train.shape[1]
+    #input_shape = (n_features,) 
     # output_shape = (y_train.shape[1],) see below
 
     # scale and standardise
@@ -104,7 +106,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     y_train = np.column_stack((y_train,nr, nr, nr, nr))
     nr = np.zeros(len(y_val))
     y_val = np.column_stack((y_val,nr,nr,nr,nr))
-    output_shape = (y_train.shape[1],)
+    #output_shape = (y_train.shape[1],)
 
     inputs = Input(shape=(3,))
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
@@ -159,7 +161,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 
     print(r2_score(y_val, y_pred[:,:4]))
 
-    ext = "dummy"
+    ext = "range105_method1_dummy_aloss"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -284,7 +286,6 @@ model, sc, scy = infer_no_dummy(training)
 
 #=======================================================================
 # Function for testing with remaining unused data.
-import tensorflow.keras
 def testing():
 
     model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
@@ -316,7 +317,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:4]))
     plt.show()
 
-ext = "dummy"
+ext = "range105_method1_dummy_aloss"
 testing()
 
 
@@ -342,7 +343,7 @@ generate_prediction_distribution(500,500,50)
 
 no_run = 100
 # Function to generate prediction distribution
-def generate_prediction_distribution(theta_1, theta_2,std_dev):
+def generate_prediction_distribution(theta_1, theta_2,std_dev,no_run):
     theta_pred = np.empty((no_run, 4), dtype=np.float64)
     #for i in range(no_run):
     para_sim = np.array([[theta_1,theta_2,std_dev]]*no_run)
@@ -355,7 +356,7 @@ def generate_prediction_distribution(theta_1, theta_2,std_dev):
         # Return a probability distribution (e.g., numpy array) for the given parameters
     return theta_pred
 
-def generate_simulation_distribution(theta_1, theta_2,std_dev):
+def generate_simulation_distribution(theta_1, theta_2,std_dev,no_run):
     theta_sim = np.empty((no_run, 4), dtype=np.float64)
     for i in range(no_run):
         dist1_samples = np.random.normal(theta_1, std_dev, size=250)
@@ -375,9 +376,9 @@ def generate_simulation_distribution(theta_1, theta_2,std_dev):
 def parameter_set():
     # Define the sets of parameters [a, b]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(500, 1001, 50)
-    theta_2 = np.arange(500, 1001, 50)
-    std_dev = np.arange(10, 51, 10)
+    theta_1 = np.arange(0, 10001, 200)
+    theta_2 = np.arange(0, 10001, 200)
+    std_dev = np.arange(10, 1001, 50)
     run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
     #sample_size = 500
     
@@ -395,6 +396,8 @@ def parameter_set():
 
 para_sim = parameter_set()
 
+#=======================================================================
+# plot code
 # Initialize lists to store the results
 mean_diff_std_arr = np.array([])
 median_diff_M_sim_arr =np.array([])
@@ -416,14 +419,32 @@ for params in para_sim:
     a, b,c = params
 
     # Generate the prediction and simulation distributions
-    pred = generate_prediction_distribution(a, b,c)[:,4]
-    sim = generate_simulation_distribution(a, b,c)[:,4]
+    pred = generate_prediction_distribution(a, b,c,100)
+    sim = generate_simulation_distribution(a, b,c,100)
 
     # Calculate the scores using different methods
-    mean_diff_std = np.mean(pred - sim) / np.std(pred)
-    wasserstein_dist = wasserstein_distance(pred, sim)
-    median_diff_M_sim = np.median(pred - sim) / np.median(sim)
-    std_ratio = np.std(pred) / np.std(sim)
+    M1_mean_diff_std = np.mean(pred[:,0] - sim[:,0]) / np.std(pred[:,0])
+    M1_wasserstein_dist = wasserstein_distance(pred[:,0], sim[:,0])
+    M1_median_diff_M_sim = np.median(pred[:,0] - sim[:,0]) / np.median(sim[:,0])
+    M1_std_ratio = np.std(pred[:,0]) / np.std(sim[:,0])
+
+    # Calculate the scores using different methods
+    M2_mean_diff_std = np.mean(pred[:,1] - sim[:,1]) / np.std(pred[:,1])
+    M2_wasserstein_dist = wasserstein_distance(pred[:,1], sim[:,1])
+    M2_median_diff_M_sim = np.median(pred[:,1] - sim[:,1]) / np.median(sim[:,1])
+    M2_std_ratio = np.std(pred[:,1]) / np.std(sim[:,1])
+
+    # Calculate the scores using different methods
+    M3_mean_diff_std = np.mean(pred[:,2] - sim[:,2]) / np.std(pred[:,2])
+    M3_wasserstein_dist = wasserstein_distance(pred[:,2], sim[:,2])
+    M3_median_diff_M_sim = np.median(pred[:,2] - sim[:,2]) / np.median(sim[:,2])
+    M3_std_ratio = np.std(pred[:,2]) / np.std(sim[:,2])
+
+    # Calculate the scores using different methods
+    M4_mean_diff_std = np.mean(pred[:,3] - sim[:,3]) / np.std(pred[:,3])
+    M4_wasserstein_dist = wasserstein_distance(pred[:,3], sim[:,3])
+    M4_median_diff_M_sim = np.median(pred[:,3] - sim[:,3]) / np.median(sim[:,3])
+    M4_std_ratio = np.std(pred[:,3]) / np.std(sim[:,3])
 
     # Append the scores to the respective lists
     mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
@@ -443,17 +464,114 @@ plt.show()
 plt.boxplot(std_ratio_arr)
 plt.show()
 
-# Print the results
-print("KS Scores:", ks_scores)
-print("Wasserstein Distances:", wasserstein_distances)
-print("T-test p-values:", ttest_p_values)
-print("Mann-Whitney U p-values:", mannwhitneyu_p_values)
+# Combine the arrays and label them
+data = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
+labels = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
+
+# Plot the boxplot
+plt.boxplot(data, labels=labels)
+plt.ylabel('Value')
+plt.title('Boxplot')
+plt.show()
 
 # Plot the distributions for the first parameter set as an example
 plt.plot(prediction_dist, label='Prediction Distribution')
 plt.plot(simulation_dist, label='Simulation Distribution')
 plt.legend()
 plt.show()
+
+def generate_prediction_distribution_full(para_sim,no_run):
+    para_sim = np.repeat(para_sim, no_run, axis=0)
+        #para_sim = (np.expand_dims(para_sim,0))
+    input_para = sc.transform(para_sim)
+    output_para = scy.inverse_transform(model.predict(input_para)[:,:4])
+    theta_pred = output_para
+        # Append the samples to the main array
+        # theta_pred[i] = output_para
+        # Return a probability distribution (e.g., numpy array) for the given parameters
+    return theta_pred
+
+def generate_simulation_distribution_full(para_sim,no_run):
+    
+    sim = np.empty((0, 4), dtype=np.float64)
+    
+    
+    for params in para_sim:
+        theta_1, theta_2, std_dev= params
+        theta_sim = np.empty((no_run, 4), dtype=np.float64)
+        for i in range(no_run):
+            dist1_samples = np.random.normal(theta_1, std_dev, size=250)
+            # Generate 250 samples from the second Gaussian distribution
+            dist2_samples = np.random.normal(theta_2, std_dev, size=250)
+            # Concatenate the samples from both distributions
+            dist_samples = np.concatenate([dist1_samples, dist2_samples])
+            mean = np.mean(dist_samples)
+            variance = np.var(dist_samples)
+            skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
+            kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+            # Append the samples to the main array
+            theta_sim[i] = np.array([mean,variance,skewness,kurtosis])
+    # Return a probability distribution (e.g., numpy array) for the given parameters
+        sim = np.append(sim, [theta_sim], axis=0)
+    return sim
+
+# Generate the prediction and simulation distributions
+pred = generate_prediction_distribution_full(para_sim,100)
+sim = generate_simulation_distribution_full(para_sim,100)
+
+for col_idx in range(4):
+    pred_col = pred[:, col_idx]
+    sim_col = sim[:, col_idx]
+    
+    mean_diff_std_arr = np.array([])
+    wasserstein_distances_arr = np.array([])
+    median_diff_M_sim_arr = np.array([])
+    std_ratio_arr = np.array([])
+
+    for start_idx in range(0, len(pred_col), 100):
+        end_idx = start_idx + step_size
+        pred_subset = pred_col[start_idx:end_idx]
+        sim_subset= sim_col[start_idx:end_idx]
+
+        # Perform operations on the subset of data
+        mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
+        wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+        median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+        std_ratio = np.std(pred_subset) / np.std(sim_subset)
+    
+    mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+    wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+    median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+    std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+
+    # Combine the arrays and label them
+    data_M1 = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
+    labels_M1 = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
+    
+    # Plot the boxplot
+    plt.boxplot(data_M1, labels=labels_M1)
+    plt.ylabel('Value')
+    plt.title('Boxplot')
+    plt.show()
+
+
+for i in range(4):
+    # Calculate the scores using different methods
+    M1_mean_diff_std = np.mean(pred[:,i] - sim[:,i]) / np.std(pred[:,i])
+    M1_wasserstein_dist = wasserstein_distance(pred[:,i], sim[:,i])
+    M1_median_diff_M_sim = np.median(pred[:,i] - sim[:,i]) / np.median(sim[:,i])
+    M1_std_ratio = np.std(pred[:,i]) / np.std(sim[:,i])
+    
+    # Combine the arrays and label them
+    data_M1 = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
+    labels_M1 = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
+    
+    # Plot the boxplot
+    plt.boxplot(data_M1, labels=labels_M1)
+    plt.ylabel('Value')
+    plt.title('Boxplot')
+    plt.show()
+
 
 theta_1 = 50
 theta_2 = 200
