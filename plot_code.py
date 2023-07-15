@@ -22,7 +22,7 @@ import pickle
 #=======================================================================
 #plot code new
 
-ext = "range103_method1_dummy_aloss"
+ext = "range105_method1_nodummy_aloss"
 model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
 
 with open("emu_sc_"+ext+".pkl", 'rb') as run:
@@ -34,9 +34,9 @@ with open("emu_scy_"+ext+".pkl", 'rb') as run:
 def parameter_set():
     # Define the sets of parameters [a, b, c]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 1001, 20)
-    theta_2 = np.arange(0, 1001, 20)
-    std_dev = np.arange(10, 101, 5)
+    theta_1 = np.arange(0, 10001, 200)
+    theta_2 = np.arange(0, 10001, 200)
+    std_dev = np.arange(10, 1001, 50)
     run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
     #sample_size = 500
     
@@ -97,9 +97,9 @@ sim = generate_simulation_distribution_full(para_sim,100)
 
 #=======================================================================
 # plot mean_diff_std for 4 moments
-theta_1 = np.arange(0, 1001, 20)
-theta_2 = np.arange(0, 1001, 20)
-std_dev = np.arange(10, 101, 5)
+theta_1 = np.arange(0, 10001, 200)
+theta_2 = np.arange(0, 10001, 200)
+std_dev = np.arange(10, 1001, 50)
 run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
 
 mean_diff_std_arr_full = np.empty((0, run), dtype=np.float64)
