@@ -3,21 +3,25 @@ mean1_range = np.arange(0, 10001, 200)
 mean2_range = np.arange(0, 10001, 200)
 std_dev_range = np.arange(10, 1001, 50)
 simulation gives us a bimodal distribution which consists of 500 samples from each set of parameters
--- sensible ranges of parameters?
+-- sensible ranges of parameters? one or 4 for each?
 
-method 1:
+mean1_range = np.arange(0, 1001, 20)
+mean2_range = np.arange(0, 1001, 20)
+std_dev_range = np.arange(10, 101, 5)
+
+method 2:
 A neural network is trained on these sets of parameters and one sample for each set
-dummy variables?
-loss function? -- aloss is sensible
+dummy variables - not affect much
+loss function -- aloss is sensible
 for evaluation, for each set of parameters, predict the distribution with 100 samples, -- enough? 100 or 500?
 and compare them with those from the simulation, assessed with four measures
 
-method 2:
+method 1:
 A neural network is trained on these sets of parameters and summary statistics for distributions from each set
 dummy variables?
 loss function?
 for evaluation, for each set of parameters, predict the distribution with 100 samples, extracting summary statistics 
-and compare them with those from the simulation, assessed with four measures
+and compare them with those from new simulation ??, assessed with four measures
 
 direct inference method
 
