@@ -22,7 +22,7 @@ import pickle
 #=======================================================================
 #plot code new
 
-ext = "range105_method1_dummy_aloss"
+ext = "range105_method1_nodummy_aloss"
 model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
 
 with open("emu_sc_"+ext+".pkl", 'rb') as run:
@@ -120,7 +120,7 @@ data = [mean_diff_std_arr_full[0], mean_diff_std_arr_full[1], mean_diff_std_arr_
 labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
+plt.boxplot(data, labels=labels)
 plt.ylabel('mean_diff_std')
 plt.title('Boxplot')
 plt.show()
@@ -151,7 +151,7 @@ data = [median_diff_M_sim_arr_full[0], median_diff_M_sim_arr_full[1], median_dif
 labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
+plt.boxplot(data, labels=labels)
 plt.ylabel('median_diff_M_sim')
 plt.title('Boxplot')
 plt.show()
@@ -184,7 +184,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
-plt.ylim(0, 100)
+#plt.ylim(0, 100)
 plt.ylabel('std_ratio')
 plt.title('Boxplot')
 plt.show()
@@ -218,7 +218,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
 plt.ylabel('wasserstein_distances')
-plt.ylim(-1000, 1000)
+plt.ylim(-10, 1000)
 plt.title('Boxplot')
 plt.show()
 

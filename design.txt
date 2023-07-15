@@ -8,7 +8,7 @@ simulation gives us a bimodal distribution which consists of 500 samples from ea
 method 1:
 A neural network is trained on these sets of parameters and one sample for each set
 dummy variables?
-loss function?
+loss function? -- aloss is sensible
 for evaluation, for each set of parameters, predict the distribution with 100 samples, -- enough? 100 or 500?
 and compare them with those from the simulation, assessed with four measures
 
