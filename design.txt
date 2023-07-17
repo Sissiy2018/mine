@@ -28,3 +28,4 @@ direct inference method
 file name: range1_method1_dummy_loss
 
 this week: asymmetric distribution, MDN method, Gaussian dropout, normalising flow
+what if change sd as well?

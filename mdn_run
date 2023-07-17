@@ -106,4 +106,68 @@ else:
     history = mdn.fit(x=x_train, y=y_train, epochs=5000, validation_data=(x_val, y_val),
                   batch_size=1, verbose=1, shuffle=True,
                   use_multiprocessing=True, callbacks=[mon])
-    
+
+ext = "range103"
+mdn.save_weights("emu_MDN2_model_"+ext+".h5")
+save_object(sc, "emu_MDN2_sc_"+ext+".pkl")
+save_object(scy, "emu_MDN2_scy_"+ext+".pkl")
+
+save_object(x_test, "emu_MDN2_xtest_"+ext+".pkl")
+save_object(y_test, "emu_MDN2_ytest_"+ext+".pkl")
+save_object(x_val, "emu_MDN2_xval_"+ext+".pkl")
+save_object(y_val, "emu_MDN2_yval_"+ext+".pkl")
+save_object(x_train, "emu_MDN2_xtrain_"+ext+".pkl")
+save_object(y_train, "emu_MDN2_ytrain_"+ext+".pkl")
+
+plt.figure()
+plt.plot(history.history['loss'], label='loss')
+plt.plot(history.history['val_loss'], label='val_loss')
+plt.savefig("history"+ext+".png")
+
+y_sample = predicting(x_val,mdn,no_mix,dim_out,scy)
+Y = np.mean(y_sample,axis=1)
+plt.figure()
+plt.plot(scy.inverse_transform(y_val)[:,0],Y[:,0],"mo",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_val)[:,1],Y[:,1],"ro",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_val)[:,2],Y[:,2],"yo",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_val)[:,3],Y[:,3],"ko",alpha=0.3)
+plt.figure()
+plt.show()
+#plt.plot(scy.inverse_transform(y_val)[:,4],Y[:,4],"go",alpha=0.3)
+print(r2_score(scy.inverse_transform(y_val), Y))
+
+y_sample_test = predicting(x_test,mdn,no_mix,dim_out,scy)
+Y_test = np.mean(y_sample_test,axis=1)
+
+plt.figure()
+plt.plot(scy.inverse_transform(y_test)[:,0],Y_test[:,0],"mo",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_test)[:,1],Y_test[:,1],"ro",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_test)[:,2],Y_test[:,2],"yo",alpha=0.3)
+plt.figure()
+plt.plot(scy.inverse_transform(y_test)[:,3],Y_test[:,3],"ko",alpha=0.3)
+plt.show()
+#plt.figure()
+#plt.plot(scy.inverse_transform(y_test)[:,4],Y[:,4],"go",alpha=0.3)
+print(r2_score(scy.inverse_transform(y_test), Y_test))
+
+
+x_pred = sc.transform([[50,200,30]])
+
+y_sample_pred = predicting(x_pred,mdn,no_mix,dim_out,scy)
+y_sample_pred = inv_trans(y_sample_pred,scy)
+
+print(np.mean(y_sample_pred[0],axis=0))
+
+plt.figure()
+plt.hist(y_sample_pred[0][:,0],linestyle = "--" ,bins =20, lw =2, color= "m", histtype=u'step')
+plt.hist(y_sample_pred[0][:,1],linestyle = "--" ,bins =20, lw =2, color= "r", histtype=u'step')
+plt.hist(y_sample_pred[0][:,2],linestyle = "--" ,bins =20, lw =2, color= "y", histtype=u'step')
+plt.hist(y_sample_pred[0][:,3],linestyle = "--" ,bins =20, lw =2, color= "k", histtype=u'step')
+#plt.hist(y_sample_pred[0][:,4],linestyle = "--" ,bins =20, lw =2, color= "g", histtype=u'step')
+
+plt.show()

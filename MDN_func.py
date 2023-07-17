@@ -48,7 +48,7 @@ def save_object(obj, filename):
 #=======================================================
 # Since the output of the MDN is the mean, the covariance matrix and the weights, it requires a few lines of code 
 # to sample from the predicted distribution. This function provides an easy way to complish this.
-
+pvec = mdn.predict(x_val)
 def predicting(x,mdn,no_mix,dim_out,scy,no_samples=1000):
     pvec = mdn.predict(x)
 
@@ -67,10 +67,14 @@ def predicting(x,mdn,no_mix,dim_out,scy,no_samples=1000):
 
     mmd = mixgauss_full(alpha,mu,cov)
     y_sample = ((tfd.Sample(mmd,sample_shape=no_samples)).sample()).numpy()
-    y_sample = scy.inverse_transform(y_sample)
+    #y_sample = scy.inverse_transform(y_sample)
 
     return y_sample
 
+def inv_trans(y_sample,scy):
+    for i in range(len(y_sample)):
+        y_sample[i] = scy.inverse_transform(y_sample[i])
+    return y_sample
 
 #=======================================================
 # MDN Class:
