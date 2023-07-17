@@ -1,92 +1,140 @@
-
-import elfi
-
-mu = elfi.Prior('uniform', -2, 4)
-sigma = elfi.Prior('uniform', 1, 4)
-
-import scipy.stats as ss
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score
+from scipy.spatial import distance
+from scipy.stats import wasserstein_distance
+import tensorflow as tf
+import tensorflow.keras
+from tensorflow.keras import backend as K
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense,Dropout,BatchNormalization,Input
+from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import EarlyStopping
+import sys
 import numpy as np
-    
-def simulator(mu, sigma, batch_size=1, random_state=None):
-    mu, sigma = np.atleast_1d(mu, sigma)
-    return ss.norm.rvs(mu[:, None], sigma[:, None], size=(batch_size, 30), random_state=random_state)
+import os
+import matplotlib.pyplot as plt
+import pickle
+from VariationalDense import VariationalDense
+#from VariationalConv2d import VariationalConv2d
+from sklearn.utils import shuffle
 
-a = simulator(3,5)
+def rw_schedule(epoch):
+    if epoch <= 1:
+        return 0
+    else:
+        return 0.0001 * (epoch - 1)
 
-def mean(y):
-    return np.mean(y, axis=1)
-    
-def var(y):
-    return np.var(y, axis=1)
+class VariationalLeNet(tf.keras.Model):
+    def __init__(self, n_class=10):
+        super().__init__()
+        self.n_class = n_class
 
+        #self.conv1 = VariationalConv2d((5,5,1,6), stride=1, padding='VALID')
+        #self.pooling1 = tf.keras.layers.MaxPooling2D(padding='SAME')
+        #self.conv2 = VariationalConv2d((5,5,6,16), stride=1, padding='VALID')
+        #self.pooling2 = tf.keras.layers.MaxPooling2D(padding='SAME')
+        
+        self.d0 = Dense(3)
+        self.d1 = Dense(100, kernel_initializer='uniform', activation='relu')
+        self.d2 = Dense(100, kernel_initializer='uniform', activation='relu')
+        self.d3 = Dense(100, kernel_initializer='uniform', activation='relu')
+        self.d4 = Dense(100, kernel_initializer='uniform', activation='relu')
+        self.d5 = Dense(8,kernel_initializer='uniform')
 
-# Set the generating parameters that we will try to infer
-mean0 = 1
-std0 = 3
-    
-# Generate some data (using a fixed seed here)
-np.random.seed(20170525) 
-y0 = simulator(mean0, std0)
-print(y0)
+        #self.flat = tf.keras.layers.Flatten()
+        self.fc1 = VariationalDense(120)
+        self.fc2 = VariationalDense(84)
+        self.fc3 = VariationalDense(10)
 
-# Add the simulator node and observed data to the model
-sim = elfi.Simulator(simulator, mu, sigma, observed=y0)
-    
- # Add summary statistics to the model
-S1 = elfi.Summary(mean, sim)
-S2 = elfi.Summary(var, sim)
-    
-# Specify distance as euclidean between summary vectors (S1, S2) from simulated and
-# observed data
-d = elfi.Distance('euclidean', S1, S2)
+        self.hidden_layer = [self.fc1, self.fc2, self.fc3]
 
-If you have ``graphviz`` installed to your system, you can also
-visualize the model:
+    @tf.function
+    def call(self, x, sparse=False):
+        x = self.d0(x)
+        #x = tf.nn.relu(x)
+        #x = self.pooling1(x)
+        x = self.d1(x)
+        x = self.d2(x)
+        #x = tf.nn.relu(x)
+        #x = self.pooling2(x)
+        #x = self.flat(x)
+        x = self.fc1(x, sparse)
+        x = self.d3(x)
+        #x = tf.nn.relu(x)
+        x = self.fc2(x, sparse)
+        x = self.d4(x)
+        #x = tf.nn.relu(x)
+        x = self.fc3(x, sparse)
+        x = self.d5(x)
 
-.. code:: ipython3
+        return x
 
-    # Plot the complete model (requires graphviz)
-elfi.draw(d)
+    def regularization(self):
+        total_reg = 0
+        for layer in self.hidden_layer:
+            total_reg += layer.regularization
 
+        return total_reg
 
+    def count_sparsity(self):
+        total_remain, total_param = 0, 0
+        for layer in self.hidden_layer:
+            a, b = layer.sparsity()
+            total_remain += a
+            total_param += b
 
-
-.. image:: https://raw.githubusercontent.com/elfi-dev/notebooks/dev/figures/quickstart_files/quickstart_11_0.svg
-
-
-
-.. Note:: The automatic naming of nodes may not work in all environments e.g. in interactive Python shells. You can alternatively provide a name argument for the nodes, e.g. ``S1 = elfi.Summary(mean, sim, name='S1')``.
-
-We can try to infer the true generating parameters ``mean0`` and
-``std0`` above with any of ELFI’s inference methods. Let’s use ABC
-Rejection sampling and sample 1000 samples from the approximate
-posterior using threshold value 0.5:
-
-.. code:: ipython3
-
-    rej = elfi.Rejection(d, batch_size=10000, seed=30052017)
-    res = rej.sample(1000, threshold=.5)
-    print(res)
-
-
-.. parsed-literal::
-
-    Method: Rejection
-    Number of samples: 1000
-    Number of simulations: 120000
-    Threshold: 0.492
-    Sample means: mu: 0.748, sigma: 3.1
-    
-
-
-Let’s plot also the marginal distributions for the parameters:
-
-.. code:: ipython3
-
-    import matplotlib.pyplot as plt
-    res.plot_marginals()
-    plt.show()
+        return 1 - (total_remain/total_param)
 
 
 
-.. image:: https://raw.githubusercontent.com/elfi-dev/notebooks/dev/figures/quickstart_files/quickstart_16_0.png
+if __name__ == '__main__':
+    np.random.seed(1234)
+    tf.random.set_seed(1234)
+    tf.config.set_visible_devices([], 'GPU')
+    @tf.function
+    def compute_loss(label, pred, reg):
+        return criterion(label, pred) + reg
+
+
+    @tf.function
+    def compute_loss2(label, pred):
+        return criterion(label, pred)
+
+    def train_step(x, t, epoch):
+        with tf.GradientTape() as tape:
+            preds = model(x)
+            reg = rw_schedule(epoch) * model.regularization()
+            loss = compute_loss(t, preds, reg)
+
+        grads = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        train_loss(loss)
+        train_acc(t, preds)
+
+        return preds
+
+    @tf.function
+    def test_step(x, t):
+        preds = model(x, sparse=True)
+        loss = compute_loss2(t, preds)
+        test_loss(loss)
+        test_acc(t, preds)
+
+        return preds
+
+model = VariationalLeNet()
+input_shape=(3,)
+model.build(input_shape)
+
+opt = tf.keras.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-09,)
+model.compile(loss='mean_square_error', optimizer=opt, metrics=['accuracy'])
+es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
+print(model.summary())
+
+history = model.fit(X_train, y_train, batch_size=int(len(X_train)/3), epochs = epochs, shuffle=True, 
+                    validation_data=(X_val, y_val), use_multiprocessing=True, callbacks=[es])
+
+

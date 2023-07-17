@@ -26,3 +26,5 @@ and compare them with those from new simulation ??, assessed with four measures
 direct inference method
 
 file name: range1_method1_dummy_loss
+
+this week: asymmetric distribution, MDN method, Gaussian dropout, normalising flow

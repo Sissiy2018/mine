@@ -1,0 +1,109 @@
+from __future__ import absolute_import, division, print_function
+import h5py
+import pickle
+from sklearn.metrics import r2_score
+import numpy as np
+import tensorflow as tf
+import tensorflow.keras as K
+import tensorflow_probability
+from tensorflow_probability import distributions as tfd
+from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
+from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau
+from sklearn.model_selection import train_test_split
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+import sys
+from MDN_func import mdnglob, save_object
+from MDN_func import loss_func, MDN_Full, slice_parameter_vectors_full, mixgauss_full
+from MDN_func import predicting
+from MDN_func import loss_func_single
+
+no_mix, no_parameters, neurons, components, dim_out = mdnglob()
+
+opt = tf.keras.optimizers.Adam(learning_rate=1e-5,
+      beta_1=0.9,
+      beta_2=0.999,
+      epsilon=1e-09,
+      )
+
+eager = False
+
+# You can reset the patience based on the convergence of the neural network of the MDN.
+
+mdn = MDN_Full(neurons=neurons, ncomp=no_mix,dim=dim_out)
+if eager:
+    mdn.compile(loss=loss_func, optimizer=opt, run_eagerly=True)
+    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=5, verbose=0, mode='auto')
+else:
+    mdn.compile(loss=loss_func_single, optimizer=opt)
+    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=5, verbose=0, mode='auto')
+
+
+#=======================================================================
+def create_samples():
+    # Define the means and standard deviations for the two Gaussian distributions
+    mean1_range = np.arange(0, 1001, 20)
+    mean2_range = np.arange(0, 1001, 20)
+    std_dev_range = np.arange(10, 101, 5)
+    run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
+    sample_size = 500
+    count = 0
+
+    # Initialize empty arrays to store the samples and parameters
+    samples = np.empty((run, 4), dtype=np.float64)
+    para = np.empty((run, 3), dtype=np.float64)
+
+    # Generate samples from each distribution
+    for mean1 in mean1_range:
+        for mean2 in mean2_range:
+            for std_dev in std_dev_range:
+                # Generate 250 samples from the first Gaussian distribution
+                dist1_samples = np.random.normal(mean1, std_dev, size=int(sample_size/2))
+                # Generate 250 samples from the second Gaussian distribution
+                dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size/2))
+                # Concatenate the samples from both distributions
+                dist_samples = np.concatenate([dist1_samples, dist2_samples])
+                # Calculate the moments
+                mean = np.mean(dist_samples)
+                variance = np.var(dist_samples)
+                skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
+                kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+                # Append the samples to the main array
+                samples[count] = np.array([mean,variance,skewness,kurtosis])
+                para[count] = np.array([mean1, mean2,std_dev])
+                count += 1
+    
+    return samples, para
+
+samples, para = create_samples()
+
+X = para
+y = samples
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.15)
+
+sc = StandardScaler()
+x_train = sc.fit_transform(X_train)
+x_test = sc.transform(X_test) 
+x_val = sc.transform(X_val)
+
+scy = StandardScaler()
+y_train = scy.fit_transform(y_train)
+y_test = scy.transform(y_test)
+y_val = scy.transform(y_val)
+
+if eager:
+    history = mdn.fit(x=x_train, y=y_train, epochs=5000, validation_data=(x_val, y_val),
+                  batch_size=max([10,int(len(x_train)/50)]), verbose=1, shuffle=True,
+#                  batch_size=1, verbose=1, shuffle=True,
+                  use_multiprocessing=True, callbacks=[mon])
+else:
+    history = mdn.fit(x=x_train, y=y_train, epochs=5000, validation_data=(x_val, y_val),
+                  batch_size=1, verbose=1, shuffle=True,
+                  use_multiprocessing=True, callbacks=[mon])
+    
