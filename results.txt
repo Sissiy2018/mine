@@ -19,5 +19,19 @@ r_2 for test: 0.02467168052281213
 range103_method1_nodummy_aloss: loss: 0.3618 - accuracy: 0.5741 - val_loss: 0.3590 - val_accuracy: 0.5771
 r_2: 0.3020419486478775
 
+mean1_range = np.arange(0, 1001, 50)
+mean2_range = np.arange(0, 1001, 50)
+std_dev_range = np.arange(10, 101, 50)
+2 components
 0.7418327001195767
 0.7416234116082676
+
+3 components
+0.5723594720772736
+0.5504588742798239
+
+mean1_range = np.arange(0, 10001, 200)
+mean2_range = np.arange(0, 10001, 200)
+std_dev_range = np.arange(10, 1001, 50)
+
+

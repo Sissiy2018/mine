@@ -27,49 +27,6 @@ from MDN_func import loss_func_single
 #=======================================================================
 #plot code new
 
-ext = "range103"
-#mdn = tensorflow.keras.models.load_model("emu_MDN2_model_"+ext+".h5", compile=False)
-# To load weights ...
-no_mix, no_parameters, neurons, components, dim_out = mdnglob()
-model = MDN_Full(neurons=neurons, ncomp=no_mix,dim=dim_out)
-opt = tf.keras.optimizers.Adam(learning_rate=1e-5,beta_1=0.9,beta_2=0.999,epsilon=1e-09,) 
-model.compile(loss=loss_func_single, optimizer=opt)
-model.load_weights("emu_MDN2_model_"+ext+".h5")
-
-
-opt = tf.keras.optimizers.Adam(learning_rate=1e-5,beta_1=0.9,beta_2=0.999,epsilon=1e-09,) 
-
-    folder = "../GRID/"
-
-    if "104" in ext:
-        grid_name = "grid_0_dim4_100.h5"
-    if "103" in ext:
-        grid_name = "grid_0_dim4_100l.h5"
-    if "105" in ext:
-        grid_name = "grid_0_dim4_100h.h5"
-    if "102" in ext:
-        grid_name = "grid_0_dim4_100vl.h5"
-
-    X, y, header = load_grid(folder + grid_name)
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.15)
-    x_train = sc.transform(X_train)
-    x_val = sc.transform(X_val)
-    y_train = scy.transform(y_train)
-    y_val = scy.transform(y_val)
-
-    model = MDN_Full(neurons=neurons, ncomp=no_mix,dim=dim_out)
-    model.compile(loss=loss_func_single, optimizer=opt)
-    model.fit(x=x_train, y=y_train, epochs=1, validation_data=(x_val, y_val), batch_size=1, verbose=1)
-    model.load_weights("emu_MDN2_model_"+ext+".h5")
-
-with open("emu_MDN2_sc_"+ext+".pkl", 'rb') as run:
-    sc = pickle.load(run)
-
-with open("emu_MDN2_scy_"+ext+".pkl", 'rb') as run:
-    scy = pickle.load(run)
-
 def parameter_set():
     # Define the sets of parameters [a, b, c]
     # Define the means and standard deviations for the two Gaussian distributions
@@ -93,8 +50,6 @@ def parameter_set():
 
 para_sim = parameter_set()
 no_mix, no_parameters, neurons, components, dim_out = mdnglob()
-
-
 
 def generate_prediction_distribution_full(para_sim):
     #para_sim = np.repeat(para_sim, no_run, axis=0)
@@ -168,11 +123,11 @@ for col_idx in range(4):
 
 #mean_diff_std_arr_full.shape
 #Combine the arrays and label them
-data = [mean_diff_std_arr_full[0], mean_diff_std_arr_full[1], mean_diff_std_arr_full[2],mean_diff_std_arr_full[3]]
+data_mean = [mean_diff_std_arr_full[0], mean_diff_std_arr_full[1], mean_diff_std_arr_full[2],mean_diff_std_arr_full[3]]
 labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data, labels=labels)
+plt.boxplot(data_mean, labels=labels)
 #plt.ylim(-100, 100)
 plt.ylabel('mean_diff_std')
 plt.title('Boxplot')
@@ -207,11 +162,11 @@ for col_idx in range(4):
     median_diff_M_sim_arr_full = np.vstack((median_diff_M_sim_arr_full, median_diff_M_sim_arr))
 
 #Combine the arrays and label them
-data = [median_diff_M_sim_arr_full[0], median_diff_M_sim_arr_full[1], median_diff_M_sim_arr_full[2],median_diff_M_sim_arr_full[3]]
+data_median = [median_diff_M_sim_arr_full[0], median_diff_M_sim_arr_full[1], median_diff_M_sim_arr_full[2],median_diff_M_sim_arr_full[3]]
 labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data, labels=labels)
+plt.boxplot(data_median, labels=labels)
 #plt.ylim(-20, 20)
 plt.ylabel('median_diff_M_sim')
 plt.title('Boxplot')
@@ -243,11 +198,11 @@ for col_idx in range(4):
     std_ratio_arr_full = np.vstack((std_ratio_arr_full, std_ratio_arr))
 
 #Combine the arrays and label them
-data_M1 = [std_ratio_arr_full[0], std_ratio_arr_full[1], std_ratio_arr_full[2],std_ratio_arr_full[3]]
+data_std = [std_ratio_arr_full[0], std_ratio_arr_full[1], std_ratio_arr_full[2],std_ratio_arr_full[3]]
 labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
+plt.boxplot(data_std, labels=labels_M1)
 #plt.ylim(0, 300)
 plt.ylabel('std_ratio')
 plt.title('Boxplot')
@@ -277,11 +232,11 @@ for col_idx in range(4):
     wasserstein_distances_arr_full = np.vstack((wasserstein_distances_arr_full, wasserstein_distances_arr))
 
 #Combine the arrays and label them
-data_M1 = [wasserstein_distances_arr_full[0], wasserstein_distances_arr_full[1], wasserstein_distances_arr_full[2],wasserstein_distances_arr_full[3]]
+data_dist = [wasserstein_distances_arr_full[0], wasserstein_distances_arr_full[1], wasserstein_distances_arr_full[2],wasserstein_distances_arr_full[3]]
 labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
+plt.boxplot(data_dist, labels=labels_M1)
 plt.ylabel('wasserstein_distances')
 #plt.ylim(0, 500)
 plt.title('Boxplot')

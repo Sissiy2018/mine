@@ -39,18 +39,18 @@ eager = False
 mdn = MDN_Full(neurons=neurons, ncomp=no_mix,dim=dim_out)
 if eager:
     mdn.compile(loss=loss_func, optimizer=opt, run_eagerly=True)
-    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=5, verbose=0, mode='auto')
+    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=20, verbose=0, mode='auto')
 else:
     mdn.compile(loss=loss_func_single, optimizer=opt)
-    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=5, verbose=0, mode='auto')
+    mon = EarlyStopping(monitor='val_loss', min_delta=0.1, patience=20, verbose=0, mode='auto')
 
 
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 10001, 500)
-    mean2_range = np.arange(0, 10001, 500)
-    std_dev_range = np.arange(10, 1001, 200)
+    mean1_range = np.arange(0, 10001, 200)
+    mean2_range = np.arange(0, 10001, 200)
+    std_dev_range = np.arange(10, 1001, 50)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
@@ -69,13 +69,13 @@ def create_samples():
                 dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size/2))
                 # Concatenate the samples from both distributions
                 dist_samples = np.concatenate([dist1_samples, dist2_samples])
-                # Calculate the moments
-                mean = np.mean(dist_samples)
-                variance = np.var(dist_samples)
-                skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-                kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+                #Draw one random sample from the 'samples' array
+                random_sample1 = np.random.choice(dist_samples)
+                random_sample2 = np.random.choice(dist_samples)
+                random_sample3 = np.random.choice(dist_samples)
+                random_sample4= np.random.choice(dist_samples)
                 # Append the samples to the main array
-                samples[count] = np.array([mean,variance,skewness,kurtosis])
+                samples[count] = np.array([random_sample1,random_sample2,random_sample3,random_sample4])
                 para[count] = np.array([mean1, mean2,std_dev])
                 count += 1
     
