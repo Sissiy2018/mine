@@ -65,6 +65,53 @@ samples, para = create_samples()
 
 print(samples[1])
 print(para[0])
+plt.hist(samples[:,3])
+plt.show()
+
+#=======================================================================
+def create_samples_stdvary():
+    # Define the means and standard deviations for the two Gaussian distributions
+    mean1_range = np.arange(0, 1001, 20)
+    mean2_range = np.arange(0, 1001, 20)
+    std1_range = np.arange(10, 101, 5)
+    std2_range = np.arange(10, 101, 5)
+    run = mean1_range.shape[0]*mean2_range.shape[0]*std1_range.shape[0]*std2_range.shape[0]
+    sample_size = 500
+    count = 0
+
+    # Initialize empty arrays to store the samples and parameters
+    samples = np.empty((run, 4), dtype=np.float64)
+    para = np.empty((run, 4), dtype=np.float64)
+
+    # Generate samples from each distribution
+    for mean1 in mean1_range:
+        for mean2 in mean2_range:
+            for std1 in std1_range:
+                for std2 in std2_range:
+                    # Generate 250 samples from the first Gaussian distribution
+                    dist1_samples = np.random.normal(mean1, std1, size=int(sample_size/2))
+                    # Generate 250 samples from the second Gaussian distribution
+                    dist2_samples = np.random.normal(mean2, std2, size=int(sample_size/2))
+                    # Concatenate the samples from both distributions
+                    dist_samples = np.concatenate([dist1_samples, dist2_samples])
+                    # Calculate the moments
+                    mean = np.mean(dist_samples)
+                    variance = np.var(dist_samples)
+                    skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
+                    kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+                    # Append the samples to the main array
+                    samples[count] = np.array([mean,variance,skewness,kurtosis])
+                    para[count] = np.array([mean1, mean2,std1,std2])
+                    count += 1
+    
+    return samples, para
+
+samples1, para1 = create_samples_stdvary()
+
+print(samples[1])
+print(para[0])
+plt.hist(samples1[:,3])
+plt.show()
 
 #=======================================================================
 def aleatoric_loss(y_true, y_pred):

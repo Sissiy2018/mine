@@ -73,9 +73,9 @@ with open("emu_MDN2_scy_"+ext+".pkl", 'rb') as run:
 def parameter_set():
     # Define the sets of parameters [a, b, c]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 1001, 50)
-    theta_2 = np.arange(0, 1001, 50)
-    std_dev = np.arange(10, 101, 20)
+    theta_1 = np.arange(0, 10001, 500)
+    theta_2 = np.arange(0, 10001, 500)
+    std_dev = np.arange(10, 1001, 200)
     run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
     #sample_size = 500
     
@@ -142,9 +142,9 @@ preda = pred[:,:,0]
 preda_test = preda.reshape(2205000)
 
 #=======================================================================
-theta_1 = np.arange(0, 1001, 50)
-theta_2 = np.arange(0, 1001, 50)
-std_dev = np.arange(10, 101, 20)
+theta_1 = np.arange(0, 10001, 500)
+theta_2 = np.arange(0, 10001, 500)
+std_dev = np.arange(10, 1001, 200)
 run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
 
 mean_diff_std_arr_full = np.empty((0, run), dtype=np.float32)
@@ -173,7 +173,7 @@ labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data, labels=labels)
-plt.ylim(-100, 100)
+#plt.ylim(-100, 100)
 plt.ylabel('mean_diff_std')
 plt.title('Boxplot')
 plt.show()
@@ -212,7 +212,7 @@ labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data, labels=labels)
-plt.ylim(-20, 20)
+#plt.ylim(-20, 20)
 plt.ylabel('median_diff_M_sim')
 plt.title('Boxplot')
 plt.show()
@@ -248,7 +248,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
-plt.ylim(0, 300)
+#plt.ylim(0, 300)
 plt.ylabel('std_ratio')
 plt.title('Boxplot')
 plt.show()
@@ -283,7 +283,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
 plt.ylabel('wasserstein_distances')
-plt.ylim(0, 500)
+#plt.ylim(0, 500)
 plt.title('Boxplot')
 plt.show()
 

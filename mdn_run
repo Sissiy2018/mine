@@ -48,9 +48,9 @@ else:
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 1001, 50)
-    mean2_range = np.arange(0, 1001, 50)
-    std_dev_range = np.arange(10, 101, 20)
+    mean1_range = np.arange(0, 10001, 500)
+    mean2_range = np.arange(0, 10001, 500)
+    std_dev_range = np.arange(10, 1001, 200)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
@@ -110,17 +110,17 @@ else:
                   batch_size=1, verbose=1, shuffle=True,
                   use_multiprocessing=True, callbacks=[mon])
 
-ext = "range103"
-mdn.save_weights("emu_MDN2_model_"+ext+".h5")
-save_object(sc, "emu_MDN2_sc_"+ext+".pkl")
-save_object(scy, "emu_MDN2_scy_"+ext+".pkl")
+ext = "range104"
+mdn.save_weights("emu_MDN3_model_"+ext+".h5")
+save_object(sc, "emu_MDN3_sc_"+ext+".pkl")
+save_object(scy, "emu_MDN3_scy_"+ext+".pkl")
 
-save_object(x_test, "emu_MDN2_xtest_"+ext+".pkl")
-save_object(y_test, "emu_MDN2_ytest_"+ext+".pkl")
-save_object(x_val, "emu_MDN2_xval_"+ext+".pkl")
-save_object(y_val, "emu_MDN2_yval_"+ext+".pkl")
-save_object(x_train, "emu_MDN2_xtrain_"+ext+".pkl")
-save_object(y_train, "emu_MDN2_ytrain_"+ext+".pkl")
+save_object(x_test, "emu_MDN3_xtest_"+ext+".pkl")
+save_object(y_test, "emu_MDN3_ytest_"+ext+".pkl")
+save_object(x_val, "emu_MDN3_xval_"+ext+".pkl")
+save_object(y_val, "emu_MDN3_yval_"+ext+".pkl")
+save_object(x_train, "emu_MDN3_xtrain_"+ext+".pkl")
+save_object(y_train, "emu_MDN3_ytrain_"+ext+".pkl")
 
 plt.figure()
 plt.plot(history.history['loss'], label='loss')
@@ -128,6 +128,7 @@ plt.plot(history.history['val_loss'], label='val_loss')
 plt.savefig("history"+ext+".png")
 
 y_sample = predicting(x_val,mdn,no_mix,dim_out,scy)
+y_sample= inv_trans(y_sample,scy)
 Y = np.mean(y_sample,axis=1)
 plt.figure()
 plt.plot(scy.inverse_transform(y_val)[:,0],Y[:,0],"mo",alpha=0.3)
@@ -143,6 +144,7 @@ plt.show()
 print(r2_score(scy.inverse_transform(y_val), Y))
 
 y_sample_test = predicting(x_test,mdn,no_mix,dim_out,scy)
+y_sample_test = inv_trans(y_sample_test,scy)
 Y_test = np.mean(y_sample_test,axis=1)
 
 plt.figure()
