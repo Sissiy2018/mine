@@ -32,7 +32,7 @@ def parameter_set():
     # Define the means and standard deviations for the two Gaussian distributions
     theta_1 = np.arange(0, 10001, 500)
     theta_2 = np.arange(0, 10001, 500)
-    std_dev = np.arange(10, 1001, 200)
+    std_dev = np.arange(10, 1001, 100)
     run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
     #sample_size = 500
     
@@ -89,18 +89,89 @@ def generate_simulation_distribution_full(para_sim,no_run):
         print(count)
     return sim
 
+def generate_simulation_distribution_1sample(para_sim,no_run):
+    
+    sim = np.empty((0, 1), dtype=np.float64)
+    count = 0
+    
+    for params in para_sim:
+        theta_1, theta_2, std_dev= params
+        theta_sim = np.empty((no_run, 1), dtype=np.float64)
+        for i in range(no_run):
+            dist1_samples = np.random.normal(theta_1, std_dev, size=250)
+            # Generate 250 samples from the second Gaussian distribution
+            dist2_samples = np.random.normal(theta_2, std_dev, size=250)
+            # Concatenate the samples from both distributions
+            dist_samples = np.concatenate([dist1_samples, dist2_samples])
+            random_sample1 = np.random.choice(dist_samples)
+            #random_sample2 = np.random.choice(dist_samples)
+            #random_sample3 = np.random.choice(dist_samples)
+            #random_sample4= np.random.choice(dist_samples)
+            # Append the samples to the main array
+            theta_sim[i] = np.array([random_sample1])
+    # Return a probability distribution (e.g., numpy array) for the given parameters
+        sim = np.vstack((sim, theta_sim))
+        count += 1
+        print(count)
+    return sim
+
 # Generate the prediction and simulation distributions
 pred = generate_prediction_distribution_full(para_sim)
-sim = generate_simulation_distribution_full(para_sim,1000)
+sim = generate_simulation_distribution_1sample(para_sim,1000)
 
-preda = pred[:,:,0]
+preda = pred[302,:,0]
+sima = sim[302000:302999,0]
+plt.hist(preda,color='blue')
+plt.hist(sima,color='green')
+#plt.legend()
+plt.show()
+
 preda_test = preda.reshape(2205000)
 
 #=======================================================================
 theta_1 = np.arange(0, 10001, 500)
 theta_2 = np.arange(0, 10001, 500)
-std_dev = np.arange(10, 1001, 200)
+std_dev = np.arange(10, 1001, 100)
 run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
+
+col_idx = 0
+pred_col = pred[:, :,col_idx]
+pred_col = pred_col.reshape(run*1000)
+sim_col = sim[:, col_idx]
+    
+mean_diff_std_arr = np.array([])
+wasserstein_distances_arr = np.array([])
+median_diff_M_sim_arr = np.array([])
+std_ratio_arr = np.array([])
+
+for start_idx in range(0, len(pred_col), 1000):
+    end_idx = start_idx + 1000
+    pred_subset = pred_col[start_idx:end_idx]
+    sim_subset= sim_col[start_idx:end_idx]
+
+        # Perform operations on the subset of data
+    mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(sim_subset)
+    mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
+
+    median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
+    median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
+
+    std_ratio = np.std(pred_subset) / np.std(sim_subset)
+    std_ratio_arr = np.append(std_ratio_arr,std_ratio)
+
+    wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
+    wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
+
+#Combine the arrays and label them
+data = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr ,wasserstein_distances_arr]
+labels = ['mean_diff_std', 'median_diff', 'std_ratio', 'wasserstein']
+
+# Plot the boxplot
+plt.boxplot(data, labels=labels)
+plt.ylim(-1, 1)
+#plt.ylabel('mean_diff_std')
+plt.title('Boxplot')
+plt.show()
 
 mean_diff_std_arr_full = np.empty((0, run), dtype=np.float32)
 for col_idx in range(4):

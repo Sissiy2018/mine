@@ -26,21 +26,27 @@ range103_MDN2_method2: r_2: 0.7418327001195767
 r_2 for test: 0.7416234116082676
 very long, 4-5 hours
 
+may not be trained very well
 but range103_MDN3_method2 for plots and
 mean1_range = np.arange(0, 1001, 50)
 mean2_range = np.arange(0, 1001, 50)
 std_dev_range = np.arange(10, 101, 10)
 
 
-mean1_range = np.arange(0, 10001, 200)
-mean2_range = np.arange(0, 10001, 200)
-std_dev_range = np.arange(10, 1001, 50)
+mean1_range = np.arange(0, 10001, 500)
+mean2_range = np.arange(0, 10001, 500)
+std_dev_range = np.arange(10, 1001, 100)
 range104_MDN3_method2: r_2: 0.5723594720772736
 r_2 for test: 0.5504588742798239
 
 mean1_range = np.arange(0, 10001, 200)
 mean2_range = np.arange(0, 10001, 200)
 std_dev_range = np.arange(10, 1001, 50)
-range104_MDN3_method1: r_2:
-r_2 for test: 
+range104_MDN3_method1: r_2: 0.47607966111274236
+r_2 for test: 0.48018136601903694
 
+mean1_range = np.arange(0, 10001, 500)
+mean2_range = np.arange(0, 10001, 500)
+std_dev_range = np.arange(10, 1001, 100)
+0.5120208316923136
+0.46056595256512

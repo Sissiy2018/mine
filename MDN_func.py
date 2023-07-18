@@ -27,7 +27,7 @@ from sklearn.preprocessing import StandardScaler
 
 no_parameters = 3
 no_mix = 3
-dim_out = 4
+dim_out = 1
 components = no_mix*dim_out
 neurons = 100
 
@@ -81,7 +81,7 @@ def inv_trans(y_sample,scy):
 
 class MDN_Full(tf.keras.Model):
 
-    def __init__(self, neurons=100, ncomp = 3, dim =4):
+    def __init__(self, neurons=100, ncomp = 3, dim =1):
         super(MDN_Full, self).__init__(name="MDN_Full")
         """Initialize neural network that is to be used for predictions"""
 

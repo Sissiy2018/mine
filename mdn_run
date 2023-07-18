@@ -48,15 +48,15 @@ else:
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 10001, 200)
-    mean2_range = np.arange(0, 10001, 200)
-    std_dev_range = np.arange(10, 1001, 50)
+    mean1_range = np.arange(0, 10001, 500)
+    mean2_range = np.arange(0, 10001, 500)
+    std_dev_range = np.arange(10, 1001, 100)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
 
     # Initialize empty arrays to store the samples and parameters
-    samples = np.empty((run, 4), dtype=np.float64)
+    samples = np.empty((run, 1), dtype=np.float64)
     para = np.empty((run, 3), dtype=np.float64)
 
     # Generate samples from each distribution
@@ -71,11 +71,11 @@ def create_samples():
                 dist_samples = np.concatenate([dist1_samples, dist2_samples])
                 #Draw one random sample from the 'samples' array
                 random_sample1 = np.random.choice(dist_samples)
-                random_sample2 = np.random.choice(dist_samples)
-                random_sample3 = np.random.choice(dist_samples)
-                random_sample4= np.random.choice(dist_samples)
+                #random_sample2 = np.random.choice(dist_samples)
+                #random_sample3 = np.random.choice(dist_samples)
+                #random_sample4= np.random.choice(dist_samples)
                 # Append the samples to the main array
-                samples[count] = np.array([random_sample1,random_sample2,random_sample3,random_sample4])
+                samples[count] = np.array([random_sample1])
                 para[count] = np.array([mean1, mean2,std_dev])
                 count += 1
     
@@ -110,7 +110,7 @@ else:
                   batch_size=1, verbose=1, shuffle=True,
                   use_multiprocessing=True, callbacks=[mon])
 
-ext = "range104"
+ext = "range104_method1"
 mdn.save_weights("emu_MDN3_model_"+ext+".h5")
 save_object(sc, "emu_MDN3_sc_"+ext+".pkl")
 save_object(scy, "emu_MDN3_scy_"+ext+".pkl")
@@ -132,6 +132,8 @@ y_sample= inv_trans(y_sample,scy)
 Y = np.mean(y_sample,axis=1)
 plt.figure()
 plt.plot(scy.inverse_transform(y_val)[:,0],Y[:,0],"mo",alpha=0.3)
+plt.show()
+
 plt.figure()
 plt.plot(scy.inverse_transform(y_val)[:,1],Y[:,1],"ro",alpha=0.3)
 plt.figure()
@@ -149,6 +151,7 @@ Y_test = np.mean(y_sample_test,axis=1)
 
 plt.figure()
 plt.plot(scy.inverse_transform(y_test)[:,0],Y_test[:,0],"mo",alpha=0.3)
+plt.show()
 plt.figure()
 plt.plot(scy.inverse_transform(y_test)[:,1],Y_test[:,1],"ro",alpha=0.3)
 plt.figure()
@@ -160,16 +163,16 @@ plt.show()
 #plt.plot(scy.inverse_transform(y_test)[:,4],Y[:,4],"go",alpha=0.3)
 print(r2_score(scy.inverse_transform(y_test), Y_test))
 
-
-x_pred = sc.transform([[50,200,30]])
-
-y_sample_pred = predicting(x_pred,mdn,no_mix,dim_out,scy)
+x_pred = sc.transform([[50,300,30]])
+y_sample = predicting(x_pred,mdn,no_mix,dim_out,scy)
 y_sample_pred = inv_trans(y_sample_pred,scy)
 
-print(np.mean(y_sample_pred[0],axis=0))
+print(np.mean(y_sample[0],axis=0))
 
 plt.figure()
-plt.hist(y_sample_pred[0][:,0],linestyle = "--" ,bins =20, lw =2, color= "m", histtype=u'step')
+plt.hist(y_sample[0][:,0],linestyle = "--" ,bins =20, lw =2, color= "m", histtype=u'step')
+plt.show()
+
 plt.hist(y_sample_pred[0][:,1],linestyle = "--" ,bins =20, lw =2, color= "r", histtype=u'step')
 plt.hist(y_sample_pred[0][:,2],linestyle = "--" ,bins =20, lw =2, color= "y", histtype=u'step')
 plt.hist(y_sample_pred[0][:,3],linestyle = "--" ,bins =20, lw =2, color= "k", histtype=u'step')
