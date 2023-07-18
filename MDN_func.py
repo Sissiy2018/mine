@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 # Global parameters to be shared by functions
 
 no_parameters = 3
-no_mix = 2
+no_mix = 3
 dim_out = 4
 components = no_mix*dim_out
 neurons = 100
@@ -48,7 +48,7 @@ def save_object(obj, filename):
 #=======================================================
 # Since the output of the MDN is the mean, the covariance matrix and the weights, it requires a few lines of code 
 # to sample from the predicted distribution. This function provides an easy way to complish this.
-pvec = mdn.predict(x_val)
+#pvec = mdn.predict(x_val)
 def predicting(x,mdn,no_mix,dim_out,scy,no_samples=1000):
     pvec = mdn.predict(x)
 
@@ -81,7 +81,7 @@ def inv_trans(y_sample,scy):
 
 class MDN_Full(tf.keras.Model):
 
-    def __init__(self, neurons=100, ncomp = 2, dim =4):
+    def __init__(self, neurons=100, ncomp = 3, dim =4):
         super(MDN_Full, self).__init__(name="MDN_Full")
         """Initialize neural network that is to be used for predictions"""
 

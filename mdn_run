@@ -16,10 +16,13 @@ import matplotlib.patches as mpatches
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import sys
-from MDN_func import mdnglob, save_object
-from MDN_func import loss_func, MDN_Full, slice_parameter_vectors_full, mixgauss_full
-from MDN_func import predicting
-from MDN_func import loss_func_single
+from MDN_func import mdnglob, loss_func, MDN_Full, save_object, mixgauss_full
+from MDN_func import predicting, loss_func_single,inv_trans
+
+#from MDN_func import mdnglob, save_object
+#from MDN_func import loss_func, MDN_Full, slice_parameter_vectors_full, mixgauss_full
+#from MDN_func import predicting
+#from MDN_func import loss_func_single,inv_trans
 
 no_mix, no_parameters, neurons, components, dim_out = mdnglob()
 
@@ -45,9 +48,9 @@ else:
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 1001, 20)
-    mean2_range = np.arange(0, 1001, 20)
-    std_dev_range = np.arange(10, 101, 5)
+    mean1_range = np.arange(0, 1001, 50)
+    mean2_range = np.arange(0, 1001, 50)
+    std_dev_range = np.arange(10, 101, 20)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
