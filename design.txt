@@ -10,14 +10,15 @@ mean2_range = np.arange(0, 1001, 20)
 std_dev_range = np.arange(10, 101, 5)
 
 method 2:
-A neural network is trained on these sets of parameters and one sample for each set
+A neural network/ MDN is trained on these sets of parameters and one sample for each set
+for MDN, use 4 samples for each set, and use single loss
 dummy variables - not affect much
 loss function -- aloss is sensible
 for evaluation, for each set of parameters, predict the distribution with 100 samples, -- enough? 100 or 500?
 and compare them with those from the simulation, assessed with four measures
 
 method 1:
-A neural network is trained on these sets of parameters and summary statistics for distributions from each set
+A neural network? MDN is trained on these sets of parameters and summary statistics for distributions from each set
 dummy variables?
 loss function?
 for evaluation, for each set of parameters, predict the distribution with 100 samples, extracting summary statistics 
@@ -28,4 +29,4 @@ direct inference method
 file name: range1_method1_dummy_loss
 
 this week: asymmetric distribution, MDN method, Gaussian dropout, normalising flow
-what if change sd as well?
+what if change sd as well? -- Not much change in dist
