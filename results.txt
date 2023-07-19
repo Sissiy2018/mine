@@ -46,3 +46,6 @@ mean2_range = np.arange(0, 10001, 500)
 std_dev_range = np.arange(10, 1001, 100)
 range104_MDN3_method2: r_2: 0.5120208316923136
 r_2 for test: 0.46056595256512
+
+nb(1000,0.05)_method1_dummy_aloss: loss: 0.5978 - accuracy: 0.2670 - val_loss: 0.5948 - val_accuracy: 0.2544
+r_2: 0.44321867773548435

@@ -34,21 +34,20 @@ with open("emu_scy_"+ext+".pkl", 'rb') as run:
 def parameter_set():
     # Define the sets of parameters [a, b, c]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 10001, 200)
-    theta_2 = np.arange(0, 10001, 200)
-    std_dev = np.arange(10, 1001, 50)
-    run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
+    r_range = np.arange(5, 1001, 5)
+    p_range = np.arange(0.05, 1.00, 0.05)
+
+    run = r_range.shape[0]*p_range.shape[0]
     #sample_size = 500
     
-    para_sim = np.empty((run, 3))
+    para_sim = np.empty((run, 2))
     
     count = 0
     # Generate samples from each distribution
-    for mean1 in theta_1:
-        for mean2 in theta_2:
-            for std in std_dev:
-                para_sim[count] = np.array([mean1,mean2,std])
-                count += 1
+    for r in r_range:
+        for p in p_range:
+            para_sim[count] = np.array([r,p])
+            count += 1
     
     return para_sim
 
@@ -71,14 +70,11 @@ def generate_simulation_distribution_full(para_sim,no_run):
     count = 0
     
     for params in para_sim:
-        theta_1, theta_2, std_dev= params
+        r,p = params
         theta_sim = np.empty((no_run, 4), dtype=np.float64)
         for i in range(no_run):
-            dist1_samples = np.random.normal(theta_1, std_dev, size=250)
-            # Generate 250 samples from the second Gaussian distribution
-            dist2_samples = np.random.normal(theta_2, std_dev, size=250)
-            # Concatenate the samples from both distributions
-            dist_samples = np.concatenate([dist1_samples, dist2_samples])
+            # Generate 500 samples from the distribution
+            dist_samples = np.random.negative_binomial(r, p, size=500)
             mean = np.mean(dist_samples)
             variance = np.var(dist_samples)
             skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
@@ -97,10 +93,9 @@ sim = generate_simulation_distribution_full(para_sim,100)
 
 #=======================================================================
 # plot mean_diff_std for 4 moments
-theta_1 = np.arange(0, 10001, 200)
-theta_2 = np.arange(0, 10001, 200)
-std_dev = np.arange(10, 1001, 50)
-run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
+r_range = np.arange(5, 1001, 5)
+p_range = np.arange(0.05, 1.00, 0.05)
+run = r_range.shape[0]*p_range.shape[0]
 
 mean_diff_std_arr_full = np.empty((0, run), dtype=np.float64)
 for col_idx in range(4):
@@ -115,7 +110,7 @@ for col_idx in range(4):
         sim_subset= sim_col[start_idx:end_idx]
 
         # Perform operations on the subset of data
-        mean_diff_std = (np.mean(pred_subset) - np.mean(sim_subset)) / np.std(pred_subset) ### check!!!
+        mean_diff_std = (np.mean(pred_subset) - np.mean(sim_subset)) / np.std(sim_subset) ### check!!!
         mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
 
     mean_diff_std_arr_full = np.vstack((mean_diff_std_arr_full, mean_diff_std_arr))
@@ -128,6 +123,7 @@ labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data, labels=labels)
 plt.ylabel('mean_diff_std')
+plt.ylim(-100,10)
 plt.title('Boxplot')
 plt.show()
 
@@ -159,7 +155,7 @@ labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data, labels=labels)
 plt.ylabel('median_diff_M_sim')
-plt.ylim(-1, 1)
+plt.ylim(-100, 100)
 plt.title('Boxplot')
 plt.show()
 
@@ -191,7 +187,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
-plt.ylim(0, 100)
+plt.ylim(-10, 500)
 plt.ylabel('std_ratio')
 plt.title('Boxplot')
 plt.show()
@@ -225,7 +221,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
 plt.ylabel('wasserstein_distances')
-plt.ylim(-10, 200)
+plt.ylim(-10, 10000)
 plt.title('Boxplot')
 plt.show()
 

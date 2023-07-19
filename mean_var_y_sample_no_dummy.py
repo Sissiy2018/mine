@@ -26,36 +26,31 @@ def save_object(obj, filename):
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 1001, 20)
-    mean2_range = np.arange(0, 1001, 20)
-    std_dev_range = np.arange(10, 101, 5)
-    run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
+    r_range = np.arange(5, 1001, 5)
+    p_range = np.arange(0.05, 1.00, 0.05)
+
+    run = r_range.shape[0]*p_range.shape[0]
     sample_size = 500
     count = 0
 
     # Initialize empty arrays to store the samples and parameters
     samples = np.empty((run, 4), dtype=np.float64)
-    para = np.empty((run, 3), dtype=np.float64)
+    para = np.empty((run, 2), dtype=np.float64)
 
     # Generate samples from each distribution
-    for mean1 in mean1_range:
-        for mean2 in mean2_range:
-            for std_dev in std_dev_range:
-                # Generate 250 samples from the first Gaussian distribution
-                dist1_samples = np.random.normal(mean1, std_dev, size=int(sample_size/2))
-                # Generate 250 samples from the second Gaussian distribution
-                dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size/2))
-                # Concatenate the samples from both distributions
-                dist_samples = np.concatenate([dist1_samples, dist2_samples])
-                # Calculate the moments
-                mean = np.mean(dist_samples)
-                variance = np.var(dist_samples)
-                skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-                kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
-                # Append the samples to the main array
-                samples[count] = np.array([mean,variance,skewness,kurtosis])
-                para[count] = np.array([mean1, mean2,std_dev])
-                count += 1
+    for r in r_range:
+        for p in p_range:
+            # Generate 500 samples from the distribution
+            dist_samples = np.random.negative_binomial(r, p, size=int(sample_size))
+            # Calculate the moments
+            mean = np.mean(dist_samples)
+            variance = np.var(dist_samples)
+            skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
+            kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+            # Append the samples to the main array
+            samples[count] = np.array([mean,variance,skewness,kurtosis])
+            para[count] = np.array([r,p])
+            count += 1
     
     return samples, para
 
@@ -63,6 +58,9 @@ samples, para = create_samples()
 
 print(samples[1])
 print(para[0])
+
+plt.hist(samples[:,3])
+plt.show()
 
 #=======================================================================
 def aleatoric_loss(y_true, y_pred):
@@ -108,7 +106,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     y_val = np.column_stack((y_val,nr,nr,nr,nr))
     #output_shape = (y_train.shape[1],)
 
-    inputs = Input(shape=(3,))
+    inputs = Input(shape=(2,))
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
     for i in range(layers):
         hl = Dense(neurons, kernel_initializer='uniform', activation='relu')(hl)
@@ -161,7 +159,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 
     print(r2_score(y_val, y_pred[:,:4]))
 
-    ext = "range103_method1_dummy_mse"
+    ext = "nb(1000,0.05)_method1_dummy_aloss"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -317,7 +315,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:4]))
     plt.show()
 
-ext = "range103_method1_dummy_aloss"
+ext = "nb(1000,0.05)_method1_dummy_aloss"
 testing()
 
 
