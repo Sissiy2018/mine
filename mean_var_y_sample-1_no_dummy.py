@@ -6,19 +6,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 from scipy.spatial import distance
 from scipy.stats import wasserstein_distance
-import tensorflow as tf
 import tensorflow.keras
-from tensorflow.keras import backend as K
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense,Dropout,BatchNormalization,Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
-import sys
 import numpy as np
 import os
+import tensorflow as tf
+from tensorflow.keras import backend as K
 import matplotlib.pyplot as plt
 import pickle
-from VariationalDense import VariationalDense
 
 #=======================================================================
 def save_object(obj, filename):
@@ -28,15 +26,15 @@ def save_object(obj, filename):
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 1001, 20)
-    mean2_range = np.arange(0, 1001, 20)
-    std_dev_range = np.arange(10, 101, 5)
+    mean1_range = np.arange(0, 10001, 200)
+    mean2_range = np.arange(0, 10001, 200)
+    std_dev_range = np.arange(10, 1001, 50)
     run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
     sample_size = 500
     count = 0
 
     # Initialize empty arrays to store the samples and parameters
-    samples = np.empty((run, 4), dtype=np.float64)
+    samples = np.empty((run, 1), dtype=np.float64)
     para = np.empty((run, 3), dtype=np.float64)
 
     # Generate samples from each distribution
@@ -49,13 +47,10 @@ def create_samples():
                 dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size/2))
                 # Concatenate the samples from both distributions
                 dist_samples = np.concatenate([dist1_samples, dist2_samples])
-                # Calculate the moments
-                mean = np.mean(dist_samples)
-                variance = np.var(dist_samples)
-                skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-                kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+                # Draw one random sample from the 'samples' array
+                random_sample = np.random.choice(dist_samples)
                 # Append the samples to the main array
-                samples[count] = np.array([mean,variance,skewness,kurtosis])
+                samples[count] = np.array([random_sample])
                 para[count] = np.array([mean1, mean2,std_dev])
                 count += 1
     
@@ -65,64 +60,16 @@ samples, para = create_samples()
 
 print(samples[1])
 print(para[0])
-plt.hist(samples[:,3])
-plt.show()
-
-#=======================================================================
-def create_samples_stdvary():
-    # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 1001, 20)
-    mean2_range = np.arange(0, 1001, 20)
-    std1_range = np.arange(10, 101, 5)
-    std2_range = np.arange(10, 101, 5)
-    run = mean1_range.shape[0]*mean2_range.shape[0]*std1_range.shape[0]*std2_range.shape[0]
-    sample_size = 500
-    count = 0
-
-    # Initialize empty arrays to store the samples and parameters
-    samples = np.empty((run, 4), dtype=np.float64)
-    para = np.empty((run, 4), dtype=np.float64)
-
-    # Generate samples from each distribution
-    for mean1 in mean1_range:
-        for mean2 in mean2_range:
-            for std1 in std1_range:
-                for std2 in std2_range:
-                    # Generate 250 samples from the first Gaussian distribution
-                    dist1_samples = np.random.normal(mean1, std1, size=int(sample_size/2))
-                    # Generate 250 samples from the second Gaussian distribution
-                    dist2_samples = np.random.normal(mean2, std2, size=int(sample_size/2))
-                    # Concatenate the samples from both distributions
-                    dist_samples = np.concatenate([dist1_samples, dist2_samples])
-                    # Calculate the moments
-                    mean = np.mean(dist_samples)
-                    variance = np.var(dist_samples)
-                    skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-                    kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
-                    # Append the samples to the main array
-                    samples[count] = np.array([mean,variance,skewness,kurtosis])
-                    para[count] = np.array([mean1, mean2,std1,std2])
-                    count += 1
-    
-    return samples, para
-
-samples1, para1 = create_samples_stdvary()
-
-print(samples[1])
-print(para[0])
-plt.hist(samples1[:,3])
-plt.show()
 
 #=======================================================================
 def aleatoric_loss(y_true, y_pred):
-    se = K.pow((y_true[:,:4]-y_pred[:,:4]),2)
-    inv_std = K.exp(-y_pred[:,:4])
+    se = K.pow((y_true[:,:1]-y_pred[:,:1]),2)
+    inv_std = K.exp(-y_pred[:,:1])
     mse = K.mean(K.batch_dot(inv_std,se))
-    reg = K.mean(y_pred[:,:4])
+    reg = K.mean(y_pred[:,:1])
     return 0.5*(mse + reg)
 
 #=======================================================================
-# Train Neural Network
 def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     
     samples, para = create_samples()
@@ -136,8 +83,8 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     print(X_train.shape, X_val.shape, y_train.shape, y_val.shape)
 
     # determine the number of input and output features
-    #n_features = X_train.shape[1]
-    #input_shape = (n_features,) 
+    n_features = X_train.shape[1]
+    input_shape = (n_features,) 
     # output_shape = (y_train.shape[1],) see below
 
     # scale and standardise
@@ -152,17 +99,17 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     y_val = scy.transform(y_val)
 
     nr = np.zeros(len(y_train))
-    y_train = np.column_stack((y_train,nr, nr, nr, nr))
+    y_train = np.column_stack((y_train, nr))
     nr = np.zeros(len(y_val))
-    y_val = np.column_stack((y_val,nr,nr,nr,nr))
-    #output_shape = (y_train.shape[1],)
+    y_val = np.column_stack((y_val,nr))
+    output_shape = (y_train.shape[1],)
 
     inputs = Input(shape=(3,))
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
     for i in range(layers):
         hl = Dense(neurons, kernel_initializer='uniform', activation='relu')(hl)
         hl = Dropout(rate = dropout_rate)(hl, training=True)
-    outputs = Dense(8, kernel_initializer='uniform')(hl)
+    outputs = Dense(2, kernel_initializer='uniform')(hl)
     model = Model(inputs, outputs)
 
 ## define model
@@ -190,9 +137,9 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     plt.legend()
     #plt.show()
 
-    y_pred =  scy.inverse_transform(model.predict(X_val)[:,:4])
+    y_pred =  scy.inverse_transform(model.predict(X_val)[:,:1])
     #y_pred = model.predict(X_val)[:,:4]
-    y_val =  scy.inverse_transform(y_val[:,:4])
+    y_val =  scy.inverse_transform(y_val[:,:1])
     #y_val = y_val[:,:4]
     #h = [0,1,2,3]
 #plt.plot(y_val[2], label='y_val[1]')
@@ -200,7 +147,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 #plt.legend()
 #plt.show()
 
-    for i in range(4):
+    for i in range(1):
         plt.figure(i+2)
         plt.plot(y_val[:,i],y_val[:,i],'r.')
         plt.plot(y_val[:,i],y_pred[:,i],'ko',alpha=0.4)
@@ -208,15 +155,15 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
         y = abs(y_pred[:,i] - y_val[:,i])/np.max(abs(y_pred[:,i] - y_val[:,i]))
         plt.plot(y_val[:,i]/np.max(y_val[:,i]),y,'o')
 
-    print(r2_score(y_val, y_pred[:,:4]))
+    print(r2_score(y_val, y_pred[:,:1]))
 
-    #ext = "range103_method1_dummy_mse"
-    #model.save("emu_model_"+ext+".h5")
-    #save_object(sc, "emu_sc_"+ext+".pkl")
-    #save_object(scy, "emu_scy_"+ext+".pkl")
+    ext = "range105_method2_dummy_aloss"
+    model.save("emu_model_"+ext+".h5")
+    save_object(sc, "emu_sc_"+ext+".pkl")
+    save_object(scy, "emu_scy_"+ext+".pkl")
 
-    #save_object(X_test, "X_test_"+ext+".pkl")
-    #save_object(y_test, "y_test_"+ext+".pkl")
+    save_object(X_test, "X_test_"+ext+".pkl")
+    save_object(y_test, "y_test_"+ext+".pkl")
     
     plt.show()
 
@@ -268,9 +215,8 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
     for i in range(layers):
         hl = Dense(neurons, kernel_initializer='uniform', activation='relu')(hl)
-        #hl = Dropout(rate = dropout_rate)(hl, training=True)
-        hl = VariationalDense(100)(hl,sparse = True)
-    outputs = Dense(4, kernel_initializer='uniform')(hl)
+        hl = Dropout(rate = dropout_rate)(hl, training=True)
+    outputs = Dense(1, kernel_initializer='uniform')(hl)
     model = Model(inputs, outputs)
 
 ## define model
@@ -282,8 +228,8 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
 #model.add(Dense(output_shape[0],kernel_initializer='uniform'))
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-09,)
-    model.compile(loss=aleatoric_loss, optimizer=opt, metrics=['accuracy'])
-    #model.compile(loss='mean_absolute_error', optimizer=opt, metrics=['accuracy'])
+    #model.compile(loss=aleatoric_loss, optimizer=opt, metrics=['accuracy'])
+    model.compile(loss='mean_absolute_error', optimizer=opt, metrics=['accuracy'])
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     print(model.summary())
     history = model.fit(X_train, y_train, batch_size=int(len(X_train)/3), epochs = epochs, shuffle=True, 
@@ -307,7 +253,7 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
 #plt.legend()
 #plt.show()
 
-    for i in range(4):
+    for i in range(1):
         plt.figure(i+2)
         plt.plot(y_val[:,i],y_val[:,i],'r.')
         plt.plot(y_val[:,i],y_pred[:,i],'ko',alpha=0.4)
@@ -317,7 +263,7 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
 
     print(r2_score(y_val, y_pred))
 
-    ext = "range105_method1_nodummy_aloss"
+    ext = "sample-1_no_dummy"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -336,6 +282,7 @@ model, sc, scy = infer_no_dummy(training)
 
 #=======================================================================
 # Function for testing with remaining unused data.
+import tensorflow.keras
 def testing():
 
     model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
@@ -352,10 +299,10 @@ def testing():
     with open("y_test_"+ext+".pkl", 'rb') as f:
          y_test = pickle.load(f)
     
-    y_pred_test = scy.inverse_transform(model.predict(X_test)[:,:4])
-    y_test = scy.inverse_transform(y_test[:,:4])
+    y_pred_test = scy.inverse_transform(model.predict(X_test)[:,:1])
+    y_test = scy.inverse_transform(y_test[:,:1])
     
-    for i in range(4):
+    for i in range(1):
         plt.figure(i+2)
         plt.plot(y_test[:,i],y_test[:,i],'r.')
         plt.plot(y_test[:,i],y_pred_test[:,i],'ko',alpha=0.4)
@@ -364,71 +311,56 @@ def testing():
         plt.plot(y_test[:,i]/np.max(y_test[:,i]),y,'o')
 #plt.show()
 
-    print(r2_score(y_test, y_pred_test[:,:4]))
+    print(r2_score(y_test, y_pred_test[:,:1]))
     plt.show()
 
-ext = "range103_method1_dummy_aloss"
+ext = "range105_method2_dummy_aloss"
 testing()
 
 
 #=======================================================================
-# plot code
+# generation functions for ploting
 
-
-a = np.array([[500,50,10]]*10)
-#a[:, np.newaxis]
-b = sc.transform(a)
-model.predict(b)[:,:4]
-c = scy.inverse_transform(model.predict(b)[:,:4])
-
-model.predict(a)
-model
-
-x = [58,144000]
-mu = np.mean(x)
-sigma = np.std(x)
-print([((58 - mu) / sigma),((144000 - mu) / sigma)])
-
-generate_prediction_distribution(500,500,50)
+generate_prediction_distribution(500,500,50,100)
 
 no_run = 100
 # Function to generate prediction distribution
 def generate_prediction_distribution(theta_1, theta_2,std_dev,no_run):
-    theta_pred = np.empty((no_run, 4), dtype=np.float64)
+    theta_pred = np.empty((no_run, 1), dtype=np.float64)
     #for i in range(no_run):
     para_sim = np.array([[theta_1,theta_2,std_dev]]*no_run)
         #para_sim = (np.expand_dims(para_sim,0))
     input_para = sc.transform(para_sim)
-    output_para = scy.inverse_transform(model.predict(input_para)[:,:4])
+    output_para = scy.inverse_transform(model.predict(input_para)[:,:1])
     theta_pred = output_para
         # Append the samples to the main array
         # theta_pred[i] = output_para
         # Return a probability distribution (e.g., numpy array) for the given parameters
     return theta_pred
 
+# Function to generate simulation distribution
 def generate_simulation_distribution(theta_1, theta_2,std_dev,no_run):
-    theta_sim = np.empty((no_run, 4), dtype=np.float64)
+    theta_sim = np.empty((no_run, 1), dtype=np.float64)
     for i in range(no_run):
         dist1_samples = np.random.normal(theta_1, std_dev, size=250)
         # Generate 250 samples from the second Gaussian distribution
         dist2_samples = np.random.normal(theta_2, std_dev, size=250)
         # Concatenate the samples from both distributions
         dist_samples = np.concatenate([dist1_samples, dist2_samples])
-        mean = np.mean(dist_samples)
-        variance = np.var(dist_samples)
-        skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-        kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
+        # Draw one random sample from the 'samples' array
+        random_sample = np.random.choice(dist_samples)
         # Append the samples to the main array
-        theta_sim[i] = np.array([mean,variance,skewness,kurtosis])
+        theta_sim[i] = np.array([random_sample])
     # Return a probability distribution (e.g., numpy array) for the given parameters
     return theta_sim
 
+# parameter sets
 def parameter_set():
     # Define the sets of parameters [a, b]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 10001, 200)
-    theta_2 = np.arange(0, 10001, 200)
-    std_dev = np.arange(10, 1001, 50)
+    theta_1 = np.arange(500, 1001, 50)
+    theta_2 = np.arange(500, 1001, 50)
+    std_dev = np.arange(10, 51, 10)
     run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
     #sample_size = 500
     
@@ -469,32 +401,14 @@ for params in para_sim:
     a, b,c = params
 
     # Generate the prediction and simulation distributions
-    pred = generate_prediction_distribution(a, b,c,100)
-    sim = generate_simulation_distribution(a, b,c,100)
+    pred = generate_prediction_distribution(a, b,c,100)[:,0]
+    sim = generate_simulation_distribution(a, b,c,100)[:,0]
 
     # Calculate the scores using different methods
-    M1_mean_diff_std = np.mean(pred[:,0] - sim[:,0]) / np.std(pred[:,0])
-    M1_wasserstein_dist = wasserstein_distance(pred[:,0], sim[:,0])
-    M1_median_diff_M_sim = np.median(pred[:,0] - sim[:,0]) / np.median(sim[:,0])
-    M1_std_ratio = np.std(pred[:,0]) / np.std(sim[:,0])
-
-    # Calculate the scores using different methods
-    M2_mean_diff_std = np.mean(pred[:,1] - sim[:,1]) / np.std(pred[:,1])
-    M2_wasserstein_dist = wasserstein_distance(pred[:,1], sim[:,1])
-    M2_median_diff_M_sim = np.median(pred[:,1] - sim[:,1]) / np.median(sim[:,1])
-    M2_std_ratio = np.std(pred[:,1]) / np.std(sim[:,1])
-
-    # Calculate the scores using different methods
-    M3_mean_diff_std = np.mean(pred[:,2] - sim[:,2]) / np.std(pred[:,2])
-    M3_wasserstein_dist = wasserstein_distance(pred[:,2], sim[:,2])
-    M3_median_diff_M_sim = np.median(pred[:,2] - sim[:,2]) / np.median(sim[:,2])
-    M3_std_ratio = np.std(pred[:,2]) / np.std(sim[:,2])
-
-    # Calculate the scores using different methods
-    M4_mean_diff_std = np.mean(pred[:,3] - sim[:,3]) / np.std(pred[:,3])
-    M4_wasserstein_dist = wasserstein_distance(pred[:,3], sim[:,3])
-    M4_median_diff_M_sim = np.median(pred[:,3] - sim[:,3]) / np.median(sim[:,3])
-    M4_std_ratio = np.std(pred[:,3]) / np.std(sim[:,3])
+    mean_diff_std = np.mean(pred - sim) / np.std(pred)
+    wasserstein_dist = wasserstein_distance(pred, sim)
+    median_diff_M_sim = np.median(pred - sim) / np.median(sim)
+    std_ratio = np.std(pred) / np.std(sim)
 
     # Append the scores to the respective lists
     mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
@@ -524,251 +438,14 @@ plt.ylabel('Value')
 plt.title('Boxplot')
 plt.show()
 
+
+pred = generate_prediction_distribution(500, 100,50,100)[:,0]
+sim = generate_simulation_distribution(500, 100,50,100)[:,0]
 # Plot the distributions for the first parameter set as an example
-plt.plot(prediction_dist, label='Prediction Distribution')
-plt.plot(simulation_dist, label='Simulation Distribution')
+plt.hist(pred, label='Prediction Distribution')
+plt.hist(sim, label='Simulation Distribution')
 plt.legend()
 plt.show()
-
-#=======================================================================
-#=======================================================================
-#plot code new
-
-ext = "range105_method1_dummy_aloss"
-model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
-
-with open("emu_sc_"+ext+".pkl", 'rb') as run:
-    sc = pickle.load(run)
-
-with open("emu_scy_"+ext+".pkl", 'rb') as run:
-    scy = pickle.load(run)
-
-def parameter_set():
-    # Define the sets of parameters [a, b]
-    # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 10001, 200)
-    theta_2 = np.arange(0, 10001, 200)
-    std_dev = np.arange(10, 1001, 50)
-    run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
-    #sample_size = 500
-    
-    para_sim = np.empty((run, 3))
-    
-    count = 0
-    # Generate samples from each distribution
-    for mean1 in theta_1:
-        for mean2 in theta_2:
-            for std in std_dev:
-                para_sim[count] = np.array([mean1,mean2,std])
-                count += 1
-    
-    return para_sim
-
-para_sim = parameter_set()
-
-def generate_prediction_distribution_full(para_sim,no_run):
-    para_sim = np.repeat(para_sim, no_run, axis=0)
-        #para_sim = (np.expand_dims(para_sim,0))
-    input_para = sc.transform(para_sim)
-    output_para = scy.inverse_transform(model.predict(input_para)[:,:4])
-    theta_pred = output_para
-        # Append the samples to the main array
-        # theta_pred[i] = output_para
-        # Return a probability distribution (e.g., numpy array) for the given parameters
-    return theta_pred
-
-def generate_simulation_distribution_full(para_sim,no_run):
-    
-    sim = np.empty((0, 4), dtype=np.float64)
-    count = 0
-    
-    for params in para_sim:
-        theta_1, theta_2, std_dev= params
-        theta_sim = np.empty((no_run, 4), dtype=np.float64)
-        for i in range(no_run):
-            dist1_samples = np.random.normal(theta_1, std_dev, size=250)
-            # Generate 250 samples from the second Gaussian distribution
-            dist2_samples = np.random.normal(theta_2, std_dev, size=250)
-            # Concatenate the samples from both distributions
-            dist_samples = np.concatenate([dist1_samples, dist2_samples])
-            mean = np.mean(dist_samples)
-            variance = np.var(dist_samples)
-            skewness = np.mean((dist_samples - mean) ** 3) / np.power(np.var(dist_samples), 3/2)
-            kurtosis = np.mean((dist_samples - mean) ** 4) / np.power(np.var(dist_samples), 2) - 3
-            # Append the samples to the main array
-            theta_sim[i] = np.array([mean,variance,skewness,kurtosis])
-    # Return a probability distribution (e.g., numpy array) for the given parameters
-        sim = np.vstack((sim, theta_sim))
-        count += 1
-        print(count)
-    return sim
-
-# Generate the prediction and simulation distributions
-pred = generate_prediction_distribution_full(para_sim,100)
-sim = generate_simulation_distribution_full(para_sim,100)
-
-mean_diff_std_arr_full = np.empty((0, 52020), dtype=np.float64)
-for col_idx in range(4):
-    pred_col = pred[:, col_idx]
-    sim_col = sim[:, col_idx]
-    
-    mean_diff_std_arr = np.array([])
-    wasserstein_distances_arr = np.array([])
-    median_diff_M_sim_arr = np.array([])
-    std_ratio_arr = np.array([])
-
-    for start_idx in range(0, len(pred_col), 100):
-        end_idx = start_idx + 100
-        pred_subset = pred_col[start_idx:end_idx]
-        sim_subset= sim_col[start_idx:end_idx]
-
-        # Perform operations on the subset of data
-        mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
-        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
-        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
-        #td_ratio = np.std(pred_subset) / np.std(sim_subset)
-        mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
-    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
-    #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
-    #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
-    mean_diff_std_arr_full = np.vstack((mean_diff_std_arr_full, mean_diff_std_arr))
-
-#Combine the arrays and label them
-data_M1 = [mean_diff_std_arr_full[0], mean_diff_std_arr_full[1], mean_diff_std_arr_full[2],mean_diff_std_arr_full[3]]
-labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
-
-# Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
-plt.ylabel('mean_diff_std')
-plt.title('Boxplot')
-plt.show()
-
-median_diff_M_sim_arr_full = np.empty((0, 52020), dtype=np.float64)
-for col_idx in range(4):
-    pred_col = pred[:, col_idx]
-    sim_col = sim[:, col_idx]
-    
-    mean_diff_std_arr = np.array([])
-    wasserstein_distances_arr = np.array([])
-    median_diff_M_sim_arr = np.array([])
-    std_ratio_arr = np.array([])
-
-    for start_idx in range(0, len(pred_col), 100):
-        end_idx = start_idx + 100
-        pred_subset = pred_col[start_idx:end_idx]
-        sim_subset= sim_col[start_idx:end_idx]
-
-        # Perform operations on the subset of data
-        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
-        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
-        median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
-        #td_ratio = np.std(pred_subset) / np.std(sim_subset)
-        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
-    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
-        median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
-    #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
-    median_diff_M_sim_arr_full = np.vstack((median_diff_M_sim_arr_full, median_diff_M_sim_arr))
-
-#Combine the arrays and label them
-data_M1 = [median_diff_M_sim_arr_full[0], median_diff_M_sim_arr_full[1], median_diff_M_sim_arr_full[2],mmedian_diff_M_sim_arr_full[3]]
-labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
-
-# Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
-plt.ylabel('median_diff_M_sim')
-plt.title('Boxplot')
-plt.show()
-
-std_ratio_arr_full = np.empty((0, 52020), dtype=np.float64)
-for col_idx in range(4):
-    pred_col = pred[:, col_idx]
-    sim_col = sim[:, col_idx]
-    
-    mean_diff_std_arr = np.array([])
-    wasserstein_distances_arr = np.array([])
-    median_diff_M_sim_arr = np.array([])
-    std_ratio_arr = np.array([])
-
-    for start_idx in range(0, len(pred_col), 100):
-        end_idx = start_idx + 100
-        pred_subset = pred_col[start_idx:end_idx]
-        sim_subset= sim_col[start_idx:end_idx]
-
-        # Perform operations on the subset of data
-        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
-        #wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
-        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
-        std_ratio = np.std(pred_subset) / np.std(sim_subset)
-        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
-    #wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
-        #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
-        std_ratio_arr = np.append(std_ratio_arr,std_ratio)
-    std_ratio_arr_full = np.vstack((std_ratio_arr_full, std_ratio_arr))
-
-#Combine the arrays and label them
-data_M1 = [std_ratio_arr_full[0], std_ratio_arr_full[1], std_ratio_arr_full[2],std_ratio_arr_full[3]]
-labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
-
-# Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
-plt.ylabel('std_ratio')
-plt.title('Boxplot')
-plt.show()
-
-wasserstein_distances_arr_full = np.empty((0, 52020), dtype=np.float64)
-for col_idx in range(4):
-    pred_col = pred[:, col_idx]
-    sim_col = sim[:, col_idx]
-    
-    mean_diff_std_arr = np.array([])
-    wasserstein_distances_arr = np.array([])
-    median_diff_M_sim_arr = np.array([])
-    std_ratio_arr = np.array([])
-
-    for start_idx in range(0, len(pred_col), 100):
-        end_idx = start_idx + 100
-        pred_subset = pred_col[start_idx:end_idx]
-        sim_subset= sim_col[start_idx:end_idx]
-
-        # Perform operations on the subset of data
-        #mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
-        wasserstein_dist = wasserstein_distance(pred_subset, sim_subset)
-        #median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
-        #std_ratio = np.std(pred_subset) / np.std(sim_subset)
-        #mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
-        wasserstein_distances_arr = np.append(wasserstein_distances_arr,wasserstein_dist)
-        #median_diff_M_sim_arr = np.append(median_diff_M_sim_arr,median_diff_M_sim)
-        #std_ratio_arr = np.append(std_ratio_arr,std_ratio)
-    wasserstein_distances_arr_full = np.vstack((wasserstein_distances_arr_full, wasserstein_distances_arr))
-
-#Combine the arrays and label them
-data_M1 = [wasserstein_distances_arr_full[0], wasserstein_distances_arr_full[1], wasserstein_distances_arr_full[2],wasserstein_distances_arr_full[3]]
-labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
-
-# Plot the boxplot
-plt.boxplot(data_M1, labels=labels_M1)
-plt.ylabel('wasserstein_distances')
-plt.title('Boxplot')
-plt.show()
-
-
-for i in range(4):
-    # Calculate the scores using different methods
-    M1_mean_diff_std = np.mean(pred[:,i] - sim[:,i]) / np.std(pred[:,i])
-    M1_wasserstein_dist = wasserstein_distance(pred[:,i], sim[:,i])
-    M1_median_diff_M_sim = np.median(pred[:,i] - sim[:,i]) / np.median(sim[:,i])
-    M1_std_ratio = np.std(pred[:,i]) / np.std(sim[:,i])
-    
-    # Combine the arrays and label them
-    data_M1 = [mean_diff_std_arr, median_diff_M_sim_arr, std_ratio_arr, wasserstein_distances_arr]
-    labels_M1 = ['Mean Difference Std', 'Median Difference M_sim', 'Std Ratio', 'Wasserstein Distances']
-    
-    # Plot the boxplot
-    plt.boxplot(data_M1, labels=labels_M1)
-    plt.ylabel('Value')
-    plt.title('Boxplot')
-    plt.show()
-
 
 theta_1 = 50
 theta_2 = 200

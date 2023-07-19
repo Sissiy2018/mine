@@ -164,13 +164,13 @@ plt.show()
 print(r2_score(scy.inverse_transform(y_test), Y_test))
 
 x_pred = sc.transform([[50,300,30]])
-y_sample = predicting(x_pred,mdn,no_mix,dim_out,scy)
+y_sample_pred = predicting(x_pred,mdn,no_mix,dim_out,scy)
 y_sample_pred = inv_trans(y_sample_pred,scy)
 
 print(np.mean(y_sample[0],axis=0))
 
 plt.figure()
-plt.hist(y_sample[0][:,0],linestyle = "--" ,bins =20, lw =2, color= "m", histtype=u'step')
+plt.hist(y_sample_pred[0][:,0],linestyle = "--" ,bins =20, lw =2, color= "m", histtype=u'step')
 plt.show()
 
 plt.hist(y_sample_pred[0][:,1],linestyle = "--" ,bins =20, lw =2, color= "r", histtype=u'step')
