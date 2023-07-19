@@ -22,7 +22,7 @@ import pickle
 #=======================================================================
 #plot code new
 
-ext = "range105_method2_dummy_aloss"
+ext = "nb(1000,0.05)_method2_dummy_aloss"
 model = tensorflow.keras.models.load_model("emu_model_"+ext+".h5", compile=False)
 
 with open("emu_sc_"+ext+".pkl", 'rb') as run:
@@ -34,21 +34,19 @@ with open("emu_scy_"+ext+".pkl", 'rb') as run:
 def parameter_set():
     # Define the sets of parameters [a, b, c]
     # Define the means and standard deviations for the two Gaussian distributions
-    theta_1 = np.arange(0, 10001, 200)
-    theta_2 = np.arange(0, 10001, 200)
-    std_dev = np.arange(10, 1001, 50)
-    run = theta_1.shape[0]*theta_2.shape[0]*std_dev.shape[0]
+    r_range = np.arange(5, 1001, 5)
+    p_range = np.arange(0.05, 1.00, 0.05)
+    run = r_range.shape[0]*p_range.shape[0]
     #sample_size = 500
     
-    para_sim = np.empty((run, 3))
+    para_sim = np.empty((run, 2))
     
     count = 0
     # Generate samples from each distribution
-    for mean1 in theta_1:
-        for mean2 in theta_2:
-            for std in std_dev:
-                para_sim[count] = np.array([mean1,mean2,std])
-                count += 1
+    for r in r_range:
+        for p in p_range:
+            para_sim[count] = np.array([r,p])
+            count += 1
     
     return para_sim
 
@@ -71,13 +69,10 @@ def generate_simulation_distribution_full(para_sim,no_run):
     count = 0
     
     for params in para_sim:
-        theta_1, theta_2, std_dev= params
+        r,p = params
         theta_sim = np.empty((no_run, 1), dtype=np.float64)
         for i in range(no_run):
-            dist1_samples = np.random.normal(theta_1, std_dev, size=250)
-            # Generate 250 samples from the second Gaussian distribution
-            dist2_samples = np.random.normal(theta_2, std_dev, size=250)
-            dist_samples = np.concatenate([dist1_samples, dist2_samples])
+            dist_samples = np.random.negative_binomial(r, p, size=500)
             random_sample = np.random.choice(dist_samples)
             # Append the samples to the main array
             theta_sim[i] = np.array([random_sample])
@@ -93,10 +88,14 @@ sim = generate_simulation_distribution_full(para_sim,100)
 
 #=======================================================================
 # plot mean_diff_std for 4 moments
-mean_diff_std_arr_full = np.empty((0, 52020), dtype=np.float64)
-median_diff_M_sim_arr_full = np.empty((0, 52020), dtype=np.float64)
-wasserstein_distances_arr_full = np.empty((0, 52020), dtype=np.float64)
-std_ratio_arr_full = np.empty((0, 52020), dtype=np.float64)
+r_range = np.arange(5, 1001, 5)
+p_range = np.arange(0.05, 1.00, 0.05)
+run = r_range.shape[0]*p_range.shape[0]
+
+mean_diff_std_arr_full = np.empty((0, run), dtype=np.float64)
+median_diff_M_sim_arr_full = np.empty((0, run), dtype=np.float64)
+wasserstein_distances_arr_full = np.empty((0, run), dtype=np.float64)
+std_ratio_arr_full = np.empty((0, run), dtype=np.float64)
 
 for col_idx in range(1):
     pred_col = pred[:, col_idx]
@@ -113,7 +112,7 @@ for col_idx in range(1):
         sim_subset= sim_col[start_idx:end_idx]
 
         # Perform operations on the subset of data
-        mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(pred_subset)
+        mean_diff_std = np.mean(pred_subset - sim_subset) / np.std(sim_subset)
         mean_diff_std_arr = np.append(mean_diff_std_arr,mean_diff_std)
 
         median_diff_M_sim = np.median(pred_subset - sim_subset) / np.median(sim_subset)
@@ -132,18 +131,35 @@ for col_idx in range(1):
 
 #Combine the arrays and label them
 data = [mean_diff_std_arr_full[0], median_diff_M_sim_arr_full[0], std_ratio_arr_full[0] ,wasserstein_distances_arr_full[0]]
-labels = ['mean_diff_std', 'Variance', 'Skewness', 'Kurtosis']
+labels = ['mean_diff_std', 'median_diff_M_sim', 'std_ratio', 'wasserstein_distance']
 
 # Plot the boxplot
-plt.boxplot(wasserstein_distances_arr_full[0])
+plt.boxplot(mean_diff_std_arr_full[0], labels = ['mean_diff_std'])
 plt.title('Boxplot')
 plt.show()
 
-plt.hist(sim[:,0][24500:24599])
-plt.hist(pred[:,0][24500:24599])
+plt.boxplot(median_diff_M_sim_arr_full[0], labels = ['median_diff_M_sim'])
+plt.title('Boxplot')
+plt.ylim(-10,2)
+plt.show()
+
+plt.boxplot(std_ratio_arr_full[0], labels = ['std_ratio'])
+plt.title('Boxplot')
+plt.ylim(0,100)
+plt.show()
+
+plt.boxplot(wasserstein_distances_arr_full[0], labels = ['wasserstein_distance'])
+plt.title('Boxplot')
+plt.ylim(0,1000)
+plt.show()
+
+
+plt.hist(pred[:,0][8500:8599])
+plt.hist(sim[:,0][8600:8699],color='g')
 plt.show()
 
 sim[:,0][0:99]
+sim[:,0].shape
 
 #=======================================================================
 median_diff_M_sim_arr_full = np.empty((0, 52020), dtype=np.float64)

@@ -152,7 +152,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
 
     print(r2_score(y_val, y_pred[:,:1]))
 
-    ext = "range105_method2_dummy_aloss"
+    ext = "nb(1000,0.05)_method2_dummy_aloss"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -309,7 +309,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:1]))
     plt.show()
 
-ext = "range105_method2_dummy_aloss"
+ext = "nb(1000,0.05)_method2_dummy_aloss"
 testing()
 
 
