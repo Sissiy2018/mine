@@ -213,7 +213,7 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
     #y_val = np.column_stack((y_val,nr,nr,nr,nr))
     output_shape = (y_train.shape[1],)
 
-    inputs = Input(shape=(3,))
+    inputs = Input(shape=(2,))
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
     for i in range(layers):
         hl = Dense(neurons, kernel_initializer='uniform', activation='relu')(hl)
@@ -265,7 +265,7 @@ def infer_no_dummy(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs =
 
     print(r2_score(y_val, y_pred))
 
-    ext = "range105_method1_nodummy_aloss"
+    ext = "nb(1000,0.05)_method1_nodummy_aloss"
     model.save("emu_model_"+ext+".h5")
     save_object(sc, "emu_sc_"+ext+".pkl")
     save_object(scy, "emu_scy_"+ext+".pkl")
@@ -315,7 +315,7 @@ def testing():
     print(r2_score(y_test, y_pred_test[:,:4]))
     plt.show()
 
-ext = "nb(1000,0.05)_method1_dummy_aloss"
+ext = "nb(1000,0.05)_method1_nodummy_aloss"
 testing()
 
 

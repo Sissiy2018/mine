@@ -26,33 +26,28 @@ def save_object(obj, filename):
 #=======================================================================
 def create_samples():
     # Define the means and standard deviations for the two Gaussian distributions
-    mean1_range = np.arange(0, 10001, 200)
-    mean2_range = np.arange(0, 10001, 200)
-    std_dev_range = np.arange(10, 1001, 50)
-    run = mean1_range.shape[0]*mean2_range.shape[0]*std_dev_range.shape[0]
+    r_range = np.arange(5, 1001, 5)
+    p_range = np.arange(0.05, 1.00, 0.05)
+
+    run = r_range.shape[0]*p_range.shape[0]
     sample_size = 500
     count = 0
 
     # Initialize empty arrays to store the samples and parameters
     samples = np.empty((run, 1), dtype=np.float64)
-    para = np.empty((run, 3), dtype=np.float64)
+    para = np.empty((run, 2), dtype=np.float64)
 
     # Generate samples from each distribution
-    for mean1 in mean1_range:
-        for mean2 in mean2_range:
-            for std_dev in std_dev_range:
-                # Generate 250 samples from the first Gaussian distribution
-                dist1_samples = np.random.normal(mean1, std_dev, size=int(sample_size/2))
-                # Generate 250 samples from the second Gaussian distribution
-                dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size/2))
-                # Concatenate the samples from both distributions
-                dist_samples = np.concatenate([dist1_samples, dist2_samples])
-                # Draw one random sample from the 'samples' array
-                random_sample = np.random.choice(dist_samples)
-                # Append the samples to the main array
-                samples[count] = np.array([random_sample])
-                para[count] = np.array([mean1, mean2,std_dev])
-                count += 1
+    for r in r_range:
+        for p in p_range:
+            # Generate 500 samples from the distribution
+            dist_samples = np.random.negative_binomial(r, p, size=int(sample_size))
+            # Draw one random sample from the 'samples' array
+            random_sample = np.random.choice(dist_samples)
+            # Append the samples to the main array
+            samples[count] = np.array([random_sample])
+            para[count] = np.array([r,p])
+            count += 1
     
     return samples, para
 
@@ -104,7 +99,7 @@ def infer(training,neurons = 100,layers = 3,dropout_rate = 0.2,epochs = 5000):
     y_val = np.column_stack((y_val,nr))
     output_shape = (y_train.shape[1],)
 
-    inputs = Input(shape=(3,))
+    inputs = Input(shape=(2,))
     hl = Dense(100, kernel_initializer='uniform', activation='relu')(inputs)
     for i in range(layers):
         hl = Dense(neurons, kernel_initializer='uniform', activation='relu')(hl)

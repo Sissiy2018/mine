@@ -49,3 +49,7 @@ r_2 for test: 0.46056595256512
 
 nb(1000,0.05)_method1_dummy_aloss: loss: 0.5978 - accuracy: 0.2670 - val_loss: 0.5948 - val_accuracy: 0.2544
 r_2: 0.44321867773548435
+
+nb(1000,0.05)_method1_nodummy_aloss: loss: 0.5861 - accuracy: 0.4002 - val_loss: 0.6119 - val_accuracy: 0.4145
+r_2: 0.5020462250120128
+r_2 for test: 0.4331020441427202

@@ -155,7 +155,7 @@ labels = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data, labels=labels)
 plt.ylabel('median_diff_M_sim')
-plt.ylim(-100, 100)
+#plt.ylim(-100, 100)
 plt.title('Boxplot')
 plt.show()
 
@@ -187,7 +187,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
-plt.ylim(-10, 500)
+plt.ylim(-1, 1)
 plt.ylabel('std_ratio')
 plt.title('Boxplot')
 plt.show()
@@ -221,7 +221,7 @@ labels_M1 = ['Mean', 'Variance', 'Skewness', 'Kurtosis']
 # Plot the boxplot
 plt.boxplot(data_M1, labels=labels_M1)
 plt.ylabel('wasserstein_distances')
-plt.ylim(-10, 10000)
+plt.ylim(-100, 8000)
 plt.title('Boxplot')
 plt.show()
 
