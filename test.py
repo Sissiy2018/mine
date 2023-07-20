@@ -1,24 +1,8 @@
-from pandas import read_csv
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score
-from scipy.spatial import distance
-from scipy.stats import wasserstein_distance
 import tensorflow as tf
-import tensorflow.keras
-from tensorflow.keras import backend as K
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense,Dropout,BatchNormalization,Input
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import EarlyStopping
-import sys
 import numpy as np
-import os
-import matplotlib.pyplot as plt
-import pickle
+
 from VariationalDense import VariationalDense
-#from VariationalConv2d import VariationalConv2d
+from VariationalConv2d import VariationalConv2d
 from sklearn.utils import shuffle
 
 def rw_schedule(epoch):
@@ -27,8 +11,9 @@ def rw_schedule(epoch):
     else:
         return 0.0001 * (epoch - 1)
 
+
 class VariationalLeNet(tf.keras.Model):
-    def __init__(self, n_class=10):
+    def __init__(self, n_class=4):
         super().__init__()
         self.n_class = n_class
 
@@ -36,39 +21,30 @@ class VariationalLeNet(tf.keras.Model):
         #self.pooling1 = tf.keras.layers.MaxPooling2D(padding='SAME')
         #self.conv2 = VariationalConv2d((5,5,6,16), stride=1, padding='VALID')
         #self.pooling2 = tf.keras.layers.MaxPooling2D(padding='SAME')
-        
-        self.d0 = Dense(3)
-        self.d1 = Dense(100, kernel_initializer='uniform', activation='relu')
-        self.d2 = Dense(100, kernel_initializer='uniform', activation='relu')
-        self.d3 = Dense(100, kernel_initializer='uniform', activation='relu')
-        self.d4 = Dense(100, kernel_initializer='uniform', activation='relu')
-        self.d5 = Dense(8,kernel_initializer='uniform')
 
         #self.flat = tf.keras.layers.Flatten()
         self.fc1 = VariationalDense(120)
         self.fc2 = VariationalDense(84)
-        self.fc3 = VariationalDense(10)
+        self.fc3 = VariationalDense(n_class)
 
+        #self.hidden_layer = [self.conv1, self.conv2, self.fc1, self.fc2, self.fc3]
         self.hidden_layer = [self.fc1, self.fc2, self.fc3]
 
     @tf.function
     def call(self, x, sparse=False):
-        x = self.d0(x)
+        #x = self.conv1(x, sparse)
         #x = tf.nn.relu(x)
         #x = self.pooling1(x)
-        x = self.d1(x)
-        x = self.d2(x)
+        #x = self.conv2(x, sparse)
         #x = tf.nn.relu(x)
         #x = self.pooling2(x)
         #x = self.flat(x)
         x = self.fc1(x, sparse)
-        x = self.d3(x)
-        #x = tf.nn.relu(x)
+        x = tf.nn.relu(x)
         x = self.fc2(x, sparse)
-        x = self.d4(x)
-        #x = tf.nn.relu(x)
+        x = tf.nn.relu(x)
         x = self.fc3(x, sparse)
-        x = self.d5(x)
+        x = tf.nn.relu(x)
 
         return x
 
@@ -124,17 +100,70 @@ if __name__ == '__main__':
         test_acc(t, preds)
 
         return preds
+    
+    @tf.function
+    def aleatoric_loss(y_true, y_pred):
+        se = K.pow((y_true[:,:1]-y_pred[:,:1]),2)
+        inv_std = K.exp(-y_pred[:,:1])
+        mse = K.mean(K.batch_dot(inv_std,se))
+        reg = K.mean(y_pred[:,:1])
+        return 0.5*(mse + reg)
 
-model = VariationalLeNet()
-input_shape=(3,)
-model.build(input_shape)
+    '''
+    Load data
+    '''
+    mnist = tf.keras.datasets.mnist
 
-opt = tf.keras.optimizers.Adam(learning_rate=0.001,beta_1=0.9,beta_2=0.999,epsilon=1e-09,)
-model.compile(loss='mean_square_error', optimizer=opt, metrics=['accuracy'])
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
-print(model.summary())
+    X = para
+    y = samples
 
-history = model.fit(X_train, y_train, batch_size=int(len(X_train)/3), epochs = epochs, shuffle=True, 
-                    validation_data=(X_val, y_val), use_multiprocessing=True, callbacks=[es])
+    # split into train and test datasets
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    #(x_train, y_train), (x_test, y_test) = mnist.load_data()
+    #x_train = (x_train.reshape(-1, 28, 28, 1) / 255).astype(np.float32)
+    #x_test = (x_test.reshape(-1, 28, 28, 1) / 255).astype(np.float32)
+    #y_train = np.eye(10)[y_train].astype(np.float32)
+    #y_test = np.eye(10)[y_test].astype(np.float32)
+
+    '''
+    Build model
+    '''
+    model = VariationalLeNet()
+    criterion = tf.losses.MeanSquaredError()
+    optimizer = tf.keras.optimizers.Adam()
+
+    '''
+    Train model
+    '''
+    epochs = 20
+    batch_size = 100
+    n_batches = x_train.shape[0] // batch_size
+
+    train_loss = tf.keras.metrics.Mean()
+    train_acc = tf.keras.metrics.CategoricalAccuracy()
+    test_loss = tf.keras.metrics.Mean()
+    test_acc = tf.keras.metrics.CategoricalAccuracy()
+
+    for epoch in range(epochs):
+
+        _x_train, _y_train = shuffle(x_train, y_train, random_state=42)
+
+        for batch in range(n_batches):
+            start = batch * batch_size
+            end = start + batch_size
+            train_step(_x_train[start:end], _y_train[start:end], epoch)
+
+        if epoch % 1 == 0 or epoch == epochs - 1:
+            preds = test_step(x_test, y_test)
+            print('Epoch: {}, Valid Cost: {:.3f}, Valid Acc: {:.3f}'.format(
+                epoch+1,
+                test_loss.result(),
+                test_acc.result()
+            ))
+            print("Sparsity: ", model.count_sparsity())
+
+
+
 
 
