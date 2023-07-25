@@ -1,63 +1,142 @@
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.optimizers import Adam
+import matplotlib.pyplot as plt
+import sklearn.datasets as datasets
 
-# Generate bimodal data for training
-def generate_bimodal_data(num_samples=1000):
-    np.random.seed(42)
-    mode1 = np.random.normal(loc=0, scale=1, size=num_samples // 2)
-    mode2 = np.random.normal(loc=5, scale=1, size=num_samples // 2)
-    data = np.concatenate([mode1, mode2])
+import torch
+from torch import nn
+from torch import optim
+
+from nflows.flows.base import Flow
+from nflows.distributions.normal import StandardNormal
+from nflows.transforms.base import CompositeTransform
+from nflows.transforms.autoregressive import MaskedAffineAutoregressiveTransform
+from nflows.transforms.permutations import ReversePermutation
+
+def bimodal_distribution(n_samples, mean1, cov1, mean2, cov2):
+    # Generate data for mode 1
+    mode1_samples = np.random.multivariate_normal(mean1, cov1, n_samples // 2)
+    # Generate data for mode 2
+    mode2_samples = np.random.multivariate_normal(mean2, cov2, n_samples // 2)
+
+    # Combine the data from both modes
+    data = np.vstack((mode1_samples, mode2_samples))
+
     return data
 
-# Define the Normalizing Flow model
-def build_normalizing_flow_model(input_dim, num_bijectors):
-    inputs = Input(shape=(input_dim,))
-    x = inputs
+def generate_2D_bimodal():
+    # Parameters for mode 1
+    mean1 = [2, 3]
+    cov1 = [[1, 0.5], [0.5, 1]]
 
-    bijectors = []
-    for _ in range(num_bijectors):
-        bijectors.append(tfp.bijectors.Affine(shift_and_log_scale_fn=tfp.bijectors.AffineScalar.params_fn))
+    # Parameters for mode 2
+    mean2 = [8, 6]
+    cov2 = [[1, -0.7], [-0.7, 1]]
 
-    normalizing_flow = tfp.bijectors.Chain(bijectors=bijectors)
-    distribution = tfp.distributions.TransformedDistribution(
-        distribution=tfp.distributions.Normal(loc=0.0, scale=1.0),
-        bijector=normalizing_flow
-    )
+    # Number of samples to generate
+    n_samples = 1000
 
-    log_prob_layer = distribution.log_prob(inputs)
-    model = Model(inputs, log_prob_layer)
+    # Generate the bimodal distribution
+    data = bimodal_distribution(n_samples, mean1, cov1, mean2, cov2)
 
-    return model
+    # Scatter plot to visualize the data
+    #plt.scatter(data[:, 0], data[:, 1], alpha=0.6)
+    #plt.title("2D Bimodal Distribution")
+    #plt.xlabel("X")
+    #plt.ylabel("Y")
+    #plt.grid(True)
+    #plt.show()
+    return data
 
-def main():
-    num_samples = 1000
-    data = generate_bimodal_data(num_samples)
-    input_dim = 1  # Assuming 1-dimensional data
-    num_bijectors = 6  # Number of bijectors in the normalizing flow
+def create_samples():
+    # Define the means and standard deviations for the two Gaussian distributions
+    mean1 = 50
+    mean2 = 300
+    std_dev = 10
+    run = 1000
+    sample_size = 500
+    samples = np.empty((run, 2), dtype=np.float64)
 
-    # Build and compile the normalizing flow model
-    model = build_normalizing_flow_model(input_dim, num_bijectors)
-    model.compile(optimizer=Adam(learning_rate=0.001), loss=lambda _, log_prob: -log_prob)
+    for i in range(run):
+        # Generate 250 samples from the first Gaussian distribution
+        dist1_samples = np.random.normal(mean1, std_dev, size=int(sample_size//2))
+        # Generate 250 samples from the second Gaussian distribution
+        dist2_samples = np.random.normal(mean2, std_dev, size=int(sample_size//2))
+        # Concatenate the samples from both distributions
+        dist_samples = np.concatenate([dist1_samples, dist2_samples])
+        # Draw one random sample from the 'samples' array
+        random_sample = np.random.choice(dist_samples,2)
+        samples[i] = random_sample
+    
+    return samples
 
-    # Train the normalizing flow model
-    model.fit(data, np.zeros((num_samples, 1)), epochs=100, batch_size=64)
+samples = create_samples()
+plt.hist(samples)
+plt.show()
 
-    # Generate new samples from the learned bimodal distribution
-    num_samples_to_generate = 1000
-    z = np.random.normal(size=(num_samples_to_generate, input_dim))
-    samples = model.predict(z)
+data = generate_2D_bimodal()
+plt.scatter(data[:, 0],data[:, 1])
+plt.show()
 
-    # Print the estimated density for a few example points
-    example_points = np.array([-2, 0, 2, 4, 6])
-    log_density = model.predict(example_points)
-    density = np.exp(log_density)
-    print("Estimated Density:")
-    for point, dens in zip(example_points, density):
-        print(f"Point: {point:.2f}, Density: {dens[0]:.5f}")
+#x, y = datasets.make_moons(128, noise=.1)
+#plt.scatter(x[:, 0], x[:, 1])
+#plt.show()
 
-if __name__ == "__main__":
-    main()
+num_layers = 5
+base_dist = StandardNormal(shape=[2])
+
+transforms = []
+for _ in range(num_layers):
+    transforms.append(ReversePermutation(features=2))
+    transforms.append(MaskedAffineAutoregressiveTransform(features=2, 
+                                                          hidden_features=4))
+transform = CompositeTransform(transforms)
+
+flow = Flow(transform, base_dist)
+optimizer = optim.Adam(flow.parameters())
+
+num_iter = 5000
+for i in range(num_iter):
+    #x, y = datasets.make_moons(128, noise=.1)
+    x = create_samples()
+    x = torch.tensor(x, dtype=torch.float32)
+    optimizer.zero_grad()
+    loss = -flow.log_prob(inputs=x).mean()
+    loss.backward()
+    optimizer.step()
+    
+    if (i + 1) % 500 == 0:
+        xline = torch.linspace(0, 12,100)
+        yline = torch.linspace(0, 12,100)
+        xgrid, ygrid = torch.meshgrid(xline, yline)
+        xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
+
+        with torch.no_grad():
+            zgrid = flow.log_prob(xyinput).exp().reshape(100, 100)
+
+        plt.contourf(xgrid.numpy(), ygrid.numpy(), zgrid.numpy())
+        plt.title('iteration {}'.format(i + 1))
+        plt.show()
+
+num_iter = 5000
+for i in range(num_iter):
+    #x, y = datasets.make_moons(128, noise=.1)
+    x = create_samples()
+    x = torch.tensor(x, dtype=torch.float32)
+    optimizer.zero_grad()
+    loss = -flow.log_prob(inputs=x).mean()
+    loss.backward()
+    optimizer.step()
+    
+    if (i + 1) % 500 == 0:
+        xline = torch.linspace(-100, 1000,100)
+        #yline = torch.linspace(0, 12,100)
+        #xgrid, ygrid = torch.meshgrid(xline, yline)
+        #xyinput = torch.cat([xgrid.reshape(-1, 1), ygrid.reshape(-1, 1)], dim=1)
+
+        with torch.no_grad():
+            zgrid = flow.log_prob(xline).exp().reshape(100)
+
+        #plt.contourf(xgrid.numpy(), ygrid.numpy(), zgrid.numpy())
+        plt.hist(zgrid.numpy())
+        plt.title('iteration {}'.format(i + 1))
+        plt.show()

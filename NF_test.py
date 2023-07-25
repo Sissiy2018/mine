@@ -51,7 +51,7 @@ print(tfp.__version__)
 """
 
 def bimodal_density(x, mean1, mean2, std1, std2):
-    return 0.5 * (np.exp(-0.5 * ((x - mean1) / std1) ** 2) / (std1 * np.sqrt(2 * np.pi))
+    return 0.3 * (np.exp(-0.5 * ((x - mean1) / std1) ** 2) / (std1 * np.sqrt(2 * np.pi))
                   + np.exp(-0.5 * ((x - mean2) / std2) ** 2) / (std2 * np.sqrt(2 * np.pi)))
 
 def generate_bimodal_data(num_samples=1000, mean1=0, mean2=5, std1=1, std2=1):
@@ -68,10 +68,10 @@ def generate_bimodal_data(num_samples=1000, mean1=0, mean2=5, std1=1, std2=1):
 
     return bimodal_data
 
-def main():
+def generate_1D_bimodal():
     num_samples = 1000
-    mean1, mean2 = 0, 5
-    std1, std2 = 1, 1
+    mean1, mean2 = 50, 300
+    std1, std2 = 10, 10
 
     bimodal_data = generate_bimodal_data(num_samples, mean1, mean2, std1, std2)
     print("Bimodal dataset shape:", bimodal_data.shape)
@@ -87,12 +87,49 @@ def main():
     plt.show()
     return bimodal_data
 
-if __name__ == "__main__":
-    main()
+"""
+
+"""
+
+def bimodal_distribution(n_samples, mean1, cov1, mean2, cov2):
+    # Generate data for mode 1
+    mode1_samples = np.random.multivariate_normal(mean1, cov1, n_samples // 2)
+
+    # Generate data for mode 2
+    mode2_samples = np.random.multivariate_normal(mean2, cov2, n_samples // 2)
+
+    # Combine the data from both modes
+    data = np.vstack((mode1_samples, mode2_samples))
+
+    return data
+
+def generate_2D_bimodal():
+    # Parameters for mode 1
+    mean1 = [2, 3]
+    cov1 = [[1, 0.5], [0.5, 1]]
+
+    # Parameters for mode 2
+    mean2 = [8, 6]
+    cov2 = [[1, -0.7], [-0.7, 1]]
+
+    # Number of samples to generate
+    n_samples = 1000
+
+    # Generate the bimodal distribution
+    data = bimodal_distribution(n_samples, mean1, cov1, mean2, cov2)
+
+    # Scatter plot to visualize the data
+    plt.scatter(data[:, 0], data[:, 1], alpha=0.6)
+    plt.title("2D Bimodal Distribution")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.grid(True)
+    plt.show()
+    return data
 
 
 #data = make_moons(3000, noise=0.05)[0].astype("float32")
-data = main()
+data = generate_2D_bimodal()
 norm = layers.Normalization()
 norm.adapt(data)
 normalized_data = norm(data)
