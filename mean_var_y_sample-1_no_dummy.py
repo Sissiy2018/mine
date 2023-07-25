@@ -1,11 +1,14 @@
 # mlp for bimodal distribution
 from pandas import read_csv
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 from scipy.spatial import distance
 from scipy.stats import wasserstein_distance
+import tensorflow as tf
+print(tf.__version__)
 import tensorflow.keras
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense,Dropout,BatchNormalization,Input
