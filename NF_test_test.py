@@ -10,11 +10,10 @@ from nflows.flows.base import Flow
 from nflows.distributions.normal import ConditionalDiagonalNormal
 from nflows.transforms.base import CompositeTransform
 from nflows.transforms.autoregressive import MaskedAffineAutoregressiveTransform
-from nflows.transforms.permutations import ReversePermutation
+from nflows.transforms.permutations import ReversePermutation, RandomPermutation
 from nflows.nn.nets import ResidualNet
 
-import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 
 def draw_samples_from_mixture(num_samples, num_components):
     means = np.array([[0, 0],[50,50]])  # Random means for each Gaussian component
@@ -51,10 +50,15 @@ base_dist = ConditionalDiagonalNormal(shape=[2],
 
 transforms = []
 for _ in range(num_layers):
-    transforms.append(ReversePermutation(features=2))
+    #transforms.append(ReversePermutation(features=2))
     transforms.append(MaskedAffineAutoregressiveTransform(features=2, 
                                                           hidden_features=4, 
-                                                          context_features=1))
+                                                          context_features=1,num_blocks=2,
+                                                          use_residual_blocks=False,
+                                                          random_mask=False,
+                                                          activation=torch.tanh,
+                                                          dropout_probability=0.0,use_batch_norm=True,))
+    transforms.append(RandomPermutation(features=2))
 transform = CompositeTransform(transforms)
 
 flow = Flow(transform, base_dist)
@@ -63,6 +67,13 @@ optimizer = optim.Adam(flow.parameters())
 num_iter = 5000
 for i in range(num_iter):
     x, y = draw_samples_from_mixture(num_samples, num_components)
+    
+    #sc = StandardScaler()
+    #x = sc.fit_transform(x)
+
+    #scy = StandardScaler()
+    #y = scy.fit_transform(y)
+    
     x = torch.tensor(x, dtype=torch.float32)
     #y = torch.tensor(y, dtype=torch.float32)
     y = torch.tensor(y, dtype=torch.float32).reshape(-1, 1)
@@ -90,6 +101,12 @@ for i in range(num_iter):
 num_iter = 5000
 for i in range(num_iter):
     x, y = draw_samples_from_mixture(num_samples, num_components)
+    sc = StandardScaler()
+    x = sc.fit_transform(x)
+
+    scy = StandardScaler()
+    y = scy.fit_transform(y)
+
     x = torch.tensor(x, dtype=torch.float32)
     #y = torch.tensor(y, dtype=torch.float32)
     y = torch.tensor(y, dtype=torch.float32).reshape(-1, 1)
@@ -112,4 +129,4 @@ for i in range(num_iter):
         plt.title('iteration {}'.format(i + 1))
         plt.show()
 
-## y reshape? activator? blocks? etc?
+## y reshape? activator? blocks? etc?log do?
